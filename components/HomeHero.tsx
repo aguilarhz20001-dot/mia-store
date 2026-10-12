@@ -10,7 +10,7 @@ function SidePanel({ src, alt, className = "" }: { src: string; alt: string; cla
   return (
     <div className={`relative rounded-3xl bg-white p-1.5 shadow-lg shadow-brand-pink/25 ring-1 ring-brand-pink/20 ${className}`}>
       <div className="relative w-full h-full overflow-hidden rounded-[1.25rem]">
-        <Image src={src} alt={alt} fill sizes="(min-width: 1024px) 22vw, 50vw" className="object-cover" priority />
+        <Image src={src} alt={alt} fill sizes="(min-width: 1024px) 22vw, 50vw" className="object-cover" loading="lazy" />
       </div>
     </div>
   );
@@ -35,6 +35,7 @@ export default function HomeHero() {
                 width={2056}
                 height={765}
                 priority
+                sizes="(min-width: 1280px) 52vw, (min-width: 1024px) 50vw, 100vw"
                 className="w-full h-auto rounded-3xl shadow-lg shadow-brand-pink/25 ring-1 ring-brand-pink/20"
               />
             </Reveal>
@@ -46,6 +47,7 @@ export default function HomeHero() {
                 alt=""
                 width={1580}
                 height={546}
+                sizes="(min-width: 672px) 42rem, 100vw"
                 className="w-full max-w-2xl h-auto mx-auto"
               />
               <p className="sr-only">Ropa, accesorios, calzado, belleza y muchas cositas más.</p>
