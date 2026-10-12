@@ -7,8 +7,10 @@ import CTABand from "@/components/CTABand";
 import { getFeaturedProducts } from "@/lib/products";
 import { whatsappLink, DEFAULT_WHATSAPP_MESSAGE } from "@/lib/contact";
 
-export default function Home() {
-  const featured = getFeaturedProducts();
+export const revalidate = 60;
+
+export default async function Home() {
+  const featured = await getFeaturedProducts();
 
   return (
     <>

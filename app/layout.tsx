@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
 import SiteBackdrop from "@/components/SiteBackdrop";
+import SiteChrome from "@/components/SiteChrome";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -34,14 +35,14 @@ export default function RootLayout({
       className={`${poppins.variable} ${script.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SiteBackdrop />
-        <Navbar />
-        <main className="relative flex-1">
-          <div aria-hidden="true" className="site-doodles" />
+        <SiteChrome
+          backdrop={<SiteBackdrop />}
+          navbar={<Navbar />}
+          footer={<Footer />}
+          floating={<WhatsAppFloat />}
+        >
           {children}
-        </main>
-        <Footer />
-        <WhatsAppFloat />
+        </SiteChrome>
       </body>
     </html>
   );

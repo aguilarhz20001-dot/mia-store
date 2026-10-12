@@ -5,13 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2, MessageCircle, ShoppingBag } from "lucide-react";
 import { useCart, setQty, removeFromCart, clearCart } from "@/lib/cart";
-import { getProduct } from "@/lib/products";
+import type { Product } from "@/lib/products";
 import { formatQ } from "@/lib/format";
 import { DELIVERY_OPTIONS, getDeliveryOption, type DeliveryId } from "@/lib/shipping";
 import { whatsappLink } from "@/lib/contact";
-import { CATEGORY_ICONS } from "./iconMap";
+import { getCategoryIcon } from "./iconMap";
 
-export default function CartView() {
+export default function CartView({ products }: { products: Product[] }) {
   const { items } = useCart();
 
   const [name, setName] = useState("");
@@ -21,8 +21,9 @@ export default function CartView() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
 
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
   const lines = items.flatMap((item) => {
-    const product = getProduct(item.slug);
+    const product = bySlug.get(item.slug);
     return product ? [{ item, product }] : [];
   });
 
@@ -92,7 +93,7 @@ export default function CartView() {
     <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] items-start">
       <div className="space-y-4">
         {lines.map(({ item, product }) => {
-          const Icon = CATEGORY_ICONS[product.category];
+          const Icon = getCategoryIcon(product.categoryIcon);
           return (
             <div key={`${item.slug}-${item.size ?? ""}`} className="card p-4 flex gap-4">
               <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-brand-pink-light to-brand-lilac-light flex items-center justify-center text-brand-pink">

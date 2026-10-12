@@ -213,3 +213,44 @@ a.card:hover .icon-badge,
   pointer-events: none;
   background: url("/fondo/garabatos.svg") center top / clamp(900px, 100%, 1500px) auto repeat-y;
 }
+
+/* ---------- Panel administrativo ---------- */
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.adm-table th {
+  text-align: left;
+  font-weight: 600;
+  color: rgba(43, 31, 61, 0.65);
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid rgba(224, 127, 195, 0.25);
+  background: rgba(253, 231, 244, 0.5);
+  white-space: nowrap;
+}
+.adm-table td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid rgba(224, 127, 195, 0.12);
+  vertical-align: middle;
+}
+.adm-table tbody tr:hover {
+  background: rgba(253, 231, 244, 0.3);
+}
+.adm-table .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.adm-table tfoot td {
+  font-weight: 700;
+  background: rgba(239, 232, 253, 0.55);
+  border-bottom: 0;
+}
+.adm-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  color: var(--brand-ink);
+}

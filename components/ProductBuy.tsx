@@ -14,6 +14,7 @@ export default function ProductBuy({ product }: { product: Product }) {
 
   const needsSize = !!product.sizes?.length;
   const soldOut = product.inStock === false;
+  const maxQty = product.stock && product.stock > 0 ? product.stock : 99;
 
   function handleAdd() {
     if (needsSize && !size) {
@@ -65,7 +66,7 @@ export default function ProductBuy({ product }: { product: Product }) {
           <button
             type="button"
             aria-label="Más"
-            onClick={() => setQty((q) => q + 1)}
+            onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
             className="w-10 h-10 flex items-center justify-center text-brand-pink-dark"
           >
             <Plus size={16} />

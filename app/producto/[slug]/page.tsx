@@ -2,32 +2,34 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft, Truck } from "lucide-react";
-import ProductImage from "@/components/ProductImage";
+import ProductGallery from "@/components/ProductGallery";
 import ProductBuy from "@/components/ProductBuy";
 import ProductCard from "@/components/ProductCard";
-import { PRODUCTS, getProduct } from "@/lib/products";
-import { getCategory } from "@/lib/categories";
+import { getProduct, getProducts } from "@/lib/products";
 import { formatQ } from "@/lib/format";
 
 type Params = Promise<{ slug: string }>;
 
-export function generateStaticParams() {
-  return PRODUCTS.map((p) => ({ slug: p.slug }));
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const products = await getProducts();
+  return products.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   return { title: product ? `${product.name} — Mia Store` : "Producto — Mia Store" };
 }
 
 export default async function ProductoPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   if (!product) notFound();
 
-  const category = getCategory(product.category);
-  const related = PRODUCTS.filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
+  const all = await getProducts();
+  const related = all.filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
 
   return (
     <section className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
@@ -36,12 +38,10 @@ export default async function ProductoPage({ params }: { params: Params }) {
       </Link>
 
       <div className="mt-6 grid gap-10 md:grid-cols-2">
-        <div className="card relative aspect-square overflow-hidden">
-          <ProductImage product={product} sizes="(min-width: 768px) 50vw, 100vw" />
-        </div>
+        <ProductGallery product={product} />
 
         <div>
-          <span className="text-sm font-medium text-brand-lilac-dark">{category?.label}</span>
+          <span className="text-sm font-medium text-brand-lilac-dark">{product.categoryLabel}</span>
           <h1 className="mt-1 text-3xl sm:text-4xl font-bold text-brand-ink">{product.name}</h1>
           <p className="mt-3 text-3xl font-bold text-brand-pink-dark">{formatQ(product.price)}</p>
           <p className="mt-4 text-brand-ink/70 leading-relaxed">{product.description}</p>

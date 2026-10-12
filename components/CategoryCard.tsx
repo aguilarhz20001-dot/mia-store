@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { Category } from "@/lib/categories";
-import { CATEGORY_ICONS } from "./iconMap";
+import { getCategoryIcon } from "./iconMap";
 
 export default function CategoryCard({ category }: { category: Category }) {
-  const Icon = CATEGORY_ICONS[category.id];
+  const Icon = getCategoryIcon(category.icon);
   return (
     <Link
       href={`/tienda?categoria=${category.id}`}

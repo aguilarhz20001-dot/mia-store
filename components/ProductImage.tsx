@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { Product } from "@/lib/products";
-import { CATEGORY_ICONS } from "./iconMap";
+import { getCategoryIcon } from "./iconMap";
 
 export default function ProductImage({
   product,
@@ -9,7 +9,7 @@ export default function ProductImage({
   product: Product;
   sizes?: string;
 }) {
-  const Icon = CATEGORY_ICONS[product.category];
+  const Icon = getCategoryIcon(product.categoryIcon);
 
   if (product.image) {
     return (

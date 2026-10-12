@@ -1,7 +1,7 @@
 import Link from "next/link";
 import DecoratedHero from "@/components/DecoratedHero";
 import ProductCard from "@/components/ProductCard";
-import { CATEGORIES, getCategory } from "@/lib/categories";
+import { findCategory, getCategories } from "@/lib/categories";
 import { getProductsByCategory } from "@/lib/products";
 
 export const metadata = { title: "Tienda — Mia Store" };
@@ -12,8 +12,9 @@ export default async function TiendaPage({
   searchParams: Promise<{ categoria?: string }>;
 }) {
   const { categoria } = await searchParams;
-  const active = categoria ? getCategory(categoria) : undefined;
-  const products = getProductsByCategory(active?.id);
+  const categories = await getCategories();
+  const active = categoria ? findCategory(categories, categoria) : undefined;
+  const products = await getProductsByCategory(active?.id);
 
   return (
     <>
@@ -26,7 +27,7 @@ export default async function TiendaPage({
       <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-4">
         <div className="flex flex-wrap gap-2">
           <Link href="/tienda" data-active={!active} className="chip">Todo</Link>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <Link key={c.id} href={`/tienda?categoria=${c.id}`} data-active={active?.id === c.id} className="chip">
               {c.label}
             </Link>
