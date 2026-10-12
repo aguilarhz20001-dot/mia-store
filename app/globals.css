@@ -1,0 +1,215 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fff8fc;
+  --foreground: #2b1f3d;
+  --brand-ink: #2b1f3d;
+  --brand-pink: #e07fc3;
+  --brand-pink-dark: #c85ca8;
+  --brand-pink-light: #fde7f4;
+  --brand-lilac: #a98be8;
+  --brand-lilac-dark: #7f5fcf;
+  --brand-lilac-light: #efe8fd;
+  --brand-white: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-pink-dark: var(--brand-pink-dark);
+  --color-brand-pink-light: var(--brand-pink-light);
+  --color-brand-lilac: var(--brand-lilac);
+  --color-brand-lilac-dark: var(--brand-lilac-dark);
+  --color-brand-lilac-light: var(--brand-lilac-light);
+  --color-brand-white: var(--brand-white);
+  --font-sans: var(--font-poppins);
+  --font-script: var(--font-script);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  background-image: radial-gradient(circle at 100% 0%, rgba(169, 139, 232, 0.14), transparent 45%),
+    radial-gradient(circle at 0% 100%, rgba(224, 127, 195, 0.14), transparent 40%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  overflow-x: clip;
+}
+
+.font-script {
+  font-family: var(--font-script), cursive;
+}
+
+.card {
+  background: var(--brand-white);
+  border-radius: 1.25rem;
+  border: 1px solid rgba(224, 127, 195, 0.18);
+  box-shadow: 0 1px 2px rgba(43, 31, 61, 0.04), 0 8px 24px rgba(224, 127, 195, 0.1);
+  transition: box-shadow 260ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 260ms ease;
+}
+
+a.card:hover,
+.card-interactive:hover {
+  box-shadow: 0 8px 16px rgba(43, 31, 61, 0.06), 0 22px 44px rgba(224, 127, 195, 0.22);
+  transform: translateY(-5px);
+  border-color: rgba(224, 127, 195, 0.4);
+}
+
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(145deg, var(--brand-pink-light), white);
+  color: var(--brand-pink-dark);
+  box-shadow: inset 0 0 0 1px rgba(224, 127, 195, 0.3);
+  flex-shrink: 0;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+a.card:hover .icon-badge,
+.card-interactive:hover .icon-badge {
+  transform: scale(1.1) rotate(-6deg);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--brand-pink), var(--brand-lilac));
+  color: white;
+  border-radius: 9999px;
+  box-shadow: 0 2px 10px rgba(224, 127, 195, 0.4);
+  transition: box-shadow 180ms ease, transform 150ms ease, filter 180ms ease;
+}
+.btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 18px rgba(224, 127, 195, 0.5);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-outline {
+  border-radius: 9999px;
+  border: 1.5px solid var(--brand-pink);
+  color: var(--brand-pink-dark);
+  background: white;
+  transition: background-color 180ms ease, color 180ms ease, transform 150ms ease;
+}
+.btn-outline:hover {
+  background: var(--brand-pink);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366, #1da851);
+  color: white;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.35);
+  transition: box-shadow 180ms ease, transform 150ms ease, filter 180ms ease;
+}
+.btn-whatsapp:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.45);
+  transform: translateY(-1px);
+}
+
+.input-field {
+  border: 1.5px solid #ecd9ea;
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.9rem;
+  background: white;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+  width: 100%;
+}
+.input-field:hover {
+  border-color: #dfb9d8;
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--brand-pink);
+  box-shadow: 0 0 0 3px rgba(224, 127, 195, 0.2);
+}
+
+.nav-link {
+  position: relative;
+  transition: color 180ms ease;
+}
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: var(--brand-pink);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 200ms ease;
+}
+.nav-link:hover::after,
+.nav-link[data-active="true"]::after {
+  transform: scaleX(1);
+}
+.nav-link[data-active="true"] {
+  color: var(--brand-pink-dark);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1.5px solid rgba(224, 127, 195, 0.35);
+  background: white;
+  color: var(--brand-ink);
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+.chip:hover {
+  border-color: var(--brand-pink);
+}
+.chip[data-active="true"] {
+  background: linear-gradient(135deg, var(--brand-pink), var(--brand-lilac));
+  color: white;
+  border-color: transparent;
+}
+
+.btn-pink {
+  background: linear-gradient(135deg, #ee4f9c, #dc3a8a);
+  color: white;
+  border-radius: 0.9rem;
+  box-shadow: 0 6px 16px rgba(220, 58, 138, 0.3);
+  transition: box-shadow 180ms ease, transform 150ms ease, filter 180ms ease;
+}
+.btn-pink:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 22px rgba(220, 58, 138, 0.38);
+  transform: translateY(-1px);
+}
+.btn-pink:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Garabatos de fondo (corazones, brillos, lavanda) repetidos a lo largo de toda la página */
+.site-doodles {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  background: url("/fondo/garabatos.svg") center top / clamp(900px, 100%, 1500px) auto repeat-y;
+}
