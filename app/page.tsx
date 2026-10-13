@@ -16,7 +16,7 @@ export default async function Home() {
     <>
       <HomeHero />
 
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-20">
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-14 md:mt-20">
         <Reveal className="flex items-end justify-between gap-4">
           <h2 className="font-script text-4xl sm:text-5xl text-brand-ink">Lo más pedido</h2>
           <Link href="/tienda" className="text-sm font-semibold text-brand-pink-dark hover:underline">
@@ -32,24 +32,36 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-20">
-        <div className="grid gap-4 md:grid-cols-2">
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 mt-14 md:mt-20">
+        <div className="grid gap-3 md:gap-4 md:grid-cols-2">
           <Reveal>
-            <div className="card p-7 h-full">
-              <span className="icon-badge"><MapPin size={26} /></span>
-              <h3 className="mt-4 text-xl font-semibold text-brand-ink">Entrega gratis en Chimaltenango</h3>
-              <p className="mt-2 text-brand-ink/70">
-                Pide desde tu celular y recibe tu pedido gratis en un punto de encuentro.
-              </p>
+            <div className="card flex items-start gap-4 p-4 md:block md:p-7 h-full">
+              <span className="icon-badge !h-11 !w-11 md:!h-14 md:!w-14">
+                <MapPin className="h-5 w-5 md:h-[26px] md:w-[26px]" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-base md:mt-4 md:text-xl font-semibold leading-snug text-brand-ink">
+                  Entrega gratis en Chimaltenango
+                </h3>
+                <p className="mt-1 text-sm md:mt-2 md:text-base text-brand-ink/70">
+                  Pide desde tu celular y recibe tu pedido gratis en un punto de encuentro.
+                </p>
+              </div>
             </div>
           </Reveal>
           <Reveal delay={0.08}>
-            <div className="card p-7 h-full">
-              <span className="icon-badge"><Truck size={26} /></span>
-              <h3 className="mt-4 text-xl font-semibold text-brand-ink">Envíos a todo el país</h3>
-              <p className="mt-2 text-brand-ink/70">
-                Llegamos a otros departamentos por paquetería. Coordinamos todo contigo por WhatsApp.
-              </p>
+            <div className="card flex items-start gap-4 p-4 md:block md:p-7 h-full">
+              <span className="icon-badge !h-11 !w-11 md:!h-14 md:!w-14">
+                <Truck className="h-5 w-5 md:h-[26px] md:w-[26px]" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-base md:mt-4 md:text-xl font-semibold leading-snug text-brand-ink">
+                  Envíos a todo el país
+                </h3>
+                <p className="mt-1 text-sm md:mt-2 md:text-base text-brand-ink/70">
+                  Llegamos a otros departamentos por paquetería. Coordinamos todo contigo por WhatsApp.
+                </p>
+              </div>
             </div>
           </Reveal>
         </div>
