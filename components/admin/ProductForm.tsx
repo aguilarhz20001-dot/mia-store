@@ -3,19 +3,23 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Video, X, Star, Save, Trash2, LoaderCircle } from "lucide-react";
-import { saveProduct, deleteProduct, createPurchase } from "@/app/admin/actions";
+import { saveProduct, saveVariant, deleteProductFully, createPurchase } from "@/app/admin/actions";
 import type { Category } from "@/lib/categories";
 import { slugify, todayGT } from "@/lib/format";
 import type { ProductRow } from "@/lib/products";
 import { MAX_VIDEO_MB, removeProductMedia, uploadProductMedia } from "@/lib/admin/upload";
+import StylesBuilder, { newDraftStyle, styleUnits, type DraftStyle } from "./StylesBuilder";
 
 export default function ProductForm({
   product,
   categories,
   publishMode = false,
+  hasVariants = false,
 }: {
   product?: ProductRow;
   categories: Category[];
+  /** true si el producto ya tiene estilos guardados (entonces se editan abajo, en “Estilos”) */
+  hasVariants?: boolean;
   /** true cuando se llega con el botón "Publicar" desde la lista de productos */
   publishMode?: boolean;
 }) {
@@ -37,6 +41,11 @@ export default function ProductForm({
   const [video, setVideo] = useState(product?.video_url ?? "");
   const [initialQty, setInitialQty] = useState("");
   const [initialCost, setInitialCost] = useState("");
+
+  // ¿Varios diseños? Solo se pregunta cuando el producto existe y todavía no tiene estilos.
+  const canChooseStyles = !isNew && !hasVariants;
+  const [multi, setMulti] = useState(false);
+  const [styles, setStyles] = useState<DraftStyle[]>(() => [newDraftStyle(), newDraftStyle()]);
 
   const [removed, setRemoved] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -111,6 +120,21 @@ export default function ProductForm({
     if (isNew && initialQty && (!Number.isInteger(qtyNum) || qtyNum <= 0)) return setError("La cantidad inicial debe ser un número entero.");
     if (isNew && qtyNum > 0 && (!initialCost || !Number.isFinite(costNum) || costNum < 0)) return setError("Escribe cuánto te costó cada unidad.");
 
+    const useStyles = canChooseStyles && multi;
+    if (useStyles && product) {
+      const names = styles.map((s) => s.name.trim().toLowerCase());
+      if (styles.length < 2) return setError("Agrega al menos 2 diseños, o elige “No” si es un solo diseño.");
+      if (names.some((n) => !n)) return setError("Escribe el color o diseño de cada uno.");
+      if (new Set(names).size !== names.length) return setError("Dos diseños tienen el mismo nombre. Cámbiale uno.");
+      const assigned = styles.reduce((n, s) => n + styleUnits(s), 0);
+      if (assigned !== product.stock)
+        return setError(
+          assigned > product.stock
+            ? `Repartiste ${assigned} unidades pero en bodega hay ${product.stock}.`
+            : `Faltan ${product.stock - assigned} unidades por repartir entre los diseños (hay ${product.stock} en bodega).`,
+        );
+    }
+
     setSaving(true);
     const res = await saveProduct({
       id: product?.id,
@@ -147,6 +171,32 @@ export default function ProductForm({
       }
     }
 
+    if (useStyles && product) {
+      // El primer diseño recibe todo el stock que ya estaba en bodega; los demás toman sus unidades de ese primero.
+      let firstId = "";
+      for (let i = 0; i < styles.length; i++) {
+        const s = styles[i];
+        const qty = styleUnits(s);
+        const out = await saveVariant({
+          product_id: product.id,
+          name: s.name,
+          images: s.images,
+          active: true,
+          ...(i > 0 && qty > 0 ? { take_from: firstId, take_qty: qty } : {}),
+        });
+        if (!out.ok) {
+          setSaving(false);
+          router.refresh();
+          return setError(
+            i === 0
+              ? out.error
+              : `Se guardaron ${i} de ${styles.length} diseños. Falló “${s.name.trim()}”: ${out.error} Los ya guardados los ves abajo en “Estilos”.`,
+          );
+        }
+        if (i === 0) firstId = out.id ?? "";
+      }
+    }
+
     if (removed.length > 0) await removeProductMedia(removed);
     router.push("/admin/productos");
     router.refresh();
@@ -154,9 +204,9 @@ export default function ProductForm({
 
   async function handleDelete() {
     if (!product) return;
-    if (!window.confirm(`¿Borrar “${product.name}”? Esta acción no se puede deshacer.`)) return;
+    if (!window.confirm(`¿Borrar “${product.name}”? Se borrarán también sus compras, ventas y estilos. Esta acción no se puede deshacer.`)) return;
     setSaving(true);
-    const res = await deleteProduct(product.id);
+    const res = await deleteProductFully(product.id);
     if (!res.ok) {
       setSaving(false);
       return setError(res.error);
@@ -170,6 +220,30 @@ export default function ProductForm({
     <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
       {/* Datos */}
       <div className="card space-y-5 p-5 sm:p-6">
+        {canChooseStyles && (
+          <fieldset className="rounded-xl border border-brand-pink/25 bg-brand-pink-light/40 p-4">
+            <legend className="px-1 text-sm font-semibold text-brand-ink">¿Tiene múltiples diseños de esta prenda?</legend>
+            <p className="text-xs text-brand-ink/60">
+              Por ejemplo una pijama en Gatitos, Corazones y Rosa. Si dices que sí, subes cada diseño por separado con su foto y sus unidades.
+            </p>
+            <div className="mt-3 flex gap-3">
+              {([false, true] as const).map((v) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  onClick={() => setMulti(v)}
+                  aria-pressed={multi === v}
+                  className={`rounded-full px-6 py-2 text-sm font-semibold transition ${
+                    multi === v ? "bg-brand-pink-dark text-white shadow" : "bg-white text-brand-ink/70 ring-1 ring-brand-pink/30 hover:bg-white/80"
+                  }`}
+                >
+                  {v ? "Sí, varios diseños" : "No, es uno solo"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <div>
           <label htmlFor="f-name" className="adm-label">Nombre</label>
           <input id="f-name" required className="input-field" value={name} onChange={(e) => onNameChange(e.target.value)} />
@@ -257,6 +331,18 @@ export default function ProductForm({
 
       {/* Fotos y video */}
       <div className="space-y-6">
+        {canChooseStyles && multi && product ? (
+          <StylesBuilder
+            styles={styles}
+            onChange={setStyles}
+            stock={product.stock}
+            folder={`productos/${product.id}/estilos`}
+            uploading={uploading}
+            onUploading={setUploading}
+            onRemovedMedia={(urls) => setRemoved((prev) => [...prev, ...urls])}
+            onError={setError}
+          />
+        ) : (
         <div className="card p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold text-brand-ink">Fotos</h2>
@@ -293,6 +379,7 @@ export default function ProductForm({
           )}
           <p className="mt-3 text-xs text-brand-ink/50">Las fotos se reducen y optimizan solas para que la tienda cargue rápido.</p>
         </div>
+        )}
 
         <div className="card p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">

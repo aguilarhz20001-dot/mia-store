@@ -12,6 +12,8 @@ import {
   TrendingUp,
   Tags,
   ClipboardCheck,
+  Receipt,
+  ShoppingCart,
   ExternalLink,
   LogOut,
 } from "lucide-react";
@@ -22,12 +24,23 @@ const NAV = [
   { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/bodega", label: "Bodega", icon: Warehouse },
   { href: "/admin/compras", label: "Compras", icon: PackagePlus },
+  { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
+  { href: "/admin/gastos", label: "Gastos", icon: Receipt },
   { href: "/admin/cuadre", label: "Cuadre", icon: ClipboardCheck },
   { href: "/admin/categorias", label: "Categorías", icon: Tags },
 ];
 
-export default function AdminShell({ email, children }: { email: string; children: ReactNode }) {
+export default function AdminShell({
+  email,
+  pendingOrders = 0,
+  children,
+}: {
+  email: string;
+  /** Pedidos esperando que los marques como vendidos */
+  pendingOrders?: number;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
 
@@ -57,6 +70,11 @@ export default function AdminShell({ email, children }: { email: string; childre
             >
               <Icon size={18} />
               {label}
+              {href === "/admin/pedidos" && pendingOrders > 0 && (
+                <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-pink-dark ring-1 ring-brand-pink/40">
+                  {pendingOrders}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -96,6 +114,9 @@ export default function AdminShell({ email, children }: { email: string; childre
               >
                 <Icon size={15} />
                 {label}
+                {href === "/admin/pedidos" && pendingOrders > 0 && (
+                  <span className="rounded-full bg-white px-1.5 text-xs font-bold text-brand-pink-dark">{pendingOrders}</span>
+                )}
               </Link>
             ))}
           </nav>

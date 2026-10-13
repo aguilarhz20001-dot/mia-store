@@ -6,6 +6,8 @@ export type CartItem = {
   slug: string;
   qty: number;
   size?: string;
+  /** Estilo elegido (si el producto tiene estilos) */
+  variantId?: string;
 };
 
 const STORAGE_KEY = "mia-store-cart";
@@ -52,30 +54,30 @@ function getServerSnapshot() {
   return EMPTY;
 }
 
-const sameLine = (a: CartItem, slug: string, size?: string) =>
-  a.slug === slug && a.size === size;
+const sameLine = (a: CartItem, slug: string, size?: string, variantId?: string) =>
+  a.slug === slug && a.size === size && a.variantId === variantId;
 
-export function addToCart(slug: string, qty = 1, size?: string) {
+export function addToCart(slug: string, qty = 1, size?: string, variantId?: string) {
   load();
-  const exists = cache.some((i) => sameLine(i, slug, size));
+  const exists = cache.some((i) => sameLine(i, slug, size, variantId));
   commit(
     exists
-      ? cache.map((i) => (sameLine(i, slug, size) ? { ...i, qty: i.qty + qty } : i))
-      : [...cache, { slug, qty, size }],
+      ? cache.map((i) => (sameLine(i, slug, size, variantId) ? { ...i, qty: i.qty + qty } : i))
+      : [...cache, { slug, qty, size, variantId }],
   );
 }
 
-export function setQty(slug: string, qty: number, size?: string) {
+export function setQty(slug: string, qty: number, size?: string, variantId?: string) {
   load();
   commit(
     qty <= 0
-      ? cache.filter((i) => !sameLine(i, slug, size))
-      : cache.map((i) => (sameLine(i, slug, size) ? { ...i, qty } : i)),
+      ? cache.filter((i) => !sameLine(i, slug, size, variantId))
+      : cache.map((i) => (sameLine(i, slug, size, variantId) ? { ...i, qty } : i)),
   );
 }
 
-export function removeFromCart(slug: string, size?: string) {
-  setQty(slug, 0, size);
+export function removeFromCart(slug: string, size?: string, variantId?: string) {
+  setQty(slug, 0, size, variantId);
 }
 
 export function clearCart() {

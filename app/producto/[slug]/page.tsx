@@ -5,6 +5,7 @@ import { ArrowLeft, Truck } from "lucide-react";
 import ProductGallery from "@/components/ProductGallery";
 import ProductBuy from "@/components/ProductBuy";
 import ProductCard from "@/components/ProductCard";
+import { ProductViewProvider } from "@/components/ProductViewContext";
 import { getProduct, getProducts } from "@/lib/products";
 import { formatQ } from "@/lib/format";
 
@@ -37,6 +38,7 @@ export default async function ProductoPage({ params }: { params: Params }) {
         <ArrowLeft size={16} /> Volver a la tienda
       </Link>
 
+      <ProductViewProvider>
       <div className="mt-6 grid gap-10 md:grid-cols-2">
         <ProductGallery product={product} />
 
@@ -55,6 +57,7 @@ export default async function ProductoPage({ params }: { params: Params }) {
           </p>
         </div>
       </div>
+      </ProductViewProvider>
 
       {related.length > 0 && (
         <div className="mt-16">

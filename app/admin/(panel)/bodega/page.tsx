@@ -4,6 +4,7 @@ import StatCard from "@/components/admin/StatCard";
 import ErrorNote from "@/components/admin/ErrorNote";
 import StockBadge from "@/components/admin/StockBadge";
 import StockIntake from "@/components/admin/StockIntake";
+import DeleteProductButton from "@/components/admin/DeleteProductButton";
 import { loadAdminData } from "@/lib/admin/data";
 import { stockStatus } from "@/lib/admin/stats";
 import { findCategory } from "@/lib/categories";
@@ -17,14 +18,21 @@ const FILTERS = [
   { id: "agotado", label: "Agotados" },
 ];
 
-export default async function BodegaPage({ searchParams }: { searchParams: Promise<{ filtro?: string; reponer?: string }> }) {
-  const { filtro = "todos", reponer } = await searchParams;
-  const { error, categories, products, purchases, rows, totals } = await loadAdminData();
+export default async function BodegaPage({ searchParams }: { searchParams: Promise<{ filtro?: string; reponer?: string; estilo?: string }> }) {
+  const { filtro = "todos", reponer, estilo } = await searchParams;
+  const { error, categories, products, purchases, variants, rows, totals } = await loadAdminData();
+  const variantsOf = new Map<string, typeof variants>();
+  for (const v of variants) variantsOf.set(v.product_id, [...(variantsOf.get(v.product_id) ?? []), v]);
 
   // Último costo pagado por producto (las compras vienen de la más nueva a la más vieja)
   const lastCost = new Map<string, number>();
   for (const p of purchases) if (!lastCost.has(p.product_id)) lastCost.set(p.product_id, Number(p.unit_cost));
-  const options = products.map((p) => ({ id: p.id, name: p.name, lastCost: lastCost.get(p.id) ?? null }));
+  const options = products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    lastCost: lastCost.get(p.id) ?? null,
+    variants: (variantsOf.get(p.id) ?? []).map((v) => ({ id: v.id, name: v.name })),
+  }));
 
   const visible = rows
     .filter((r) => filtro === "todos" || stockStatus(r.stock) === filtro)
@@ -35,7 +43,7 @@ export default async function BodegaPage({ searchParams }: { searchParams: Promi
       <PageTitle title="Bodega" description="Aquí ingresas mercadería (nueva o reponiendo) y ves lo que tienes en stock, cuánto costó y cuánto vale al venderlo." />
       {error && <ErrorNote message={error} />}
 
-      <StockIntake key={reponer ?? "nuevo"} today={todayGT()} categories={categories} options={options} initialProductId={reponer} />
+      <StockIntake key={`${reponer ?? "nuevo"}-${estilo ?? ""}`} today={todayGT()} categories={categories} options={options} initialProductId={reponer} initialVariantId={estilo} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Productos" value={String(totals.products)} />
@@ -85,6 +93,18 @@ export default async function BodegaPage({ searchParams }: { searchParams: Promi
                       {findCategory(categories, r.product.category)?.label ?? r.product.category}
                       {!r.product.active && " · Oculto en la tienda"}
                     </div>
+                    {(variantsOf.get(r.product.id) ?? []).length > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {variantsOf.get(r.product.id)!.map((v) => (
+                          <span
+                            key={v.id}
+                            className={`rounded-full px-2 py-0.5 text-xs ${v.stock <= 0 ? "bg-red-100 text-red-700" : "bg-brand-lilac-light text-brand-lilac-dark"}`}
+                          >
+                            {v.name}: {v.stock}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td><StockBadge stock={r.stock} /></td>
                   <td className="num font-semibold">{r.stock}</td>
@@ -94,10 +114,21 @@ export default async function BodegaPage({ searchParams }: { searchParams: Promi
                   <td className="num">{r.bought > 0 ? formatPct(r.unitMargin) : "—"}</td>
                   <td className="num">{formatQ(r.stockCost)}</td>
                   <td className="num">{formatQ(r.stockSaleValue)}</td>
-                  <td className="num">
+                  <td className="num whitespace-nowrap">
                     <Link href={`/admin/bodega?reponer=${r.product.id}`} className="text-sm text-brand-pink-dark hover:underline">
                       + Reponer
                     </Link>
+                    <DeleteProductButton
+                      id={r.product.id}
+                      name={r.product.name}
+                      media={[
+                        ...(r.product.images ?? []),
+                        ...(r.product.video_url ? [r.product.video_url] : []),
+                        ...(variantsOf.get(r.product.id) ?? []).flatMap((v) => v.images ?? []),
+                      ]}
+                      purchases={r.bought}
+                      sales={r.sold}
+                    />
                   </td>
                 </tr>
               ))}

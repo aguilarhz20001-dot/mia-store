@@ -1,11 +1,15 @@
 import type { ProductRow } from "@/lib/products";
-import type { PurchaseRow, SaleRow } from "./types";
+import type { ExpenseRow, PurchaseRow, SaleRow } from "./types";
 
 /** Foto de los números de un período. Se guarda tal cual al cerrar un cuadre. */
 export type ClosingSnapshot = {
   version: 1;
   sales: { count: number; units: number; revenue: number; cogs: number; profit: number; margin: number };
   purchases: { count: number; units: number; invested: number };
+  /** Gastos del período (bolsas, gasolina, etc.). Opcional: los cuadres viejos no lo traen. */
+  expenses?: { count: number; total: number; byCategory: { category: string; total: number }[] };
+  /** Ganancia después de gastos = ganancia de ventas − gastos. Opcional por la misma razón. */
+  net?: number;
   /** Lo que quedó en bodega al final del período (valorado al precio de venta actual) */
   stock: { units: number; cost: number; saleValue: number };
   top: { name: string; units: number; revenue: number; profit: number }[];
@@ -22,6 +26,7 @@ export function computeClosing(
   sales: SaleRow[],
   start: string,
   end: string,
+  expenses: ExpenseRow[] = [],
 ): ClosingSnapshot {
   const inRange = (d: string) => d >= start && d <= end;
   const salesIn = sales.filter((s) => inRange(s.sold_at));
@@ -30,6 +35,14 @@ export function computeClosing(
   const revenue = salesIn.reduce((n, s) => n + s.qty * Number(s.unit_price), 0);
   const cogs = salesIn.reduce((n, s) => n + s.qty * Number(s.unit_cost), 0);
   const profit = revenue - cogs;
+
+  const expensesIn = expenses.filter((e) => inRange(e.spent_at));
+  const expensesTotal = expensesIn.reduce((n, e) => n + Number(e.amount), 0);
+  const byCat = new Map<string, number>();
+  for (const e of expensesIn) {
+    const key = e.category || "Sin categoría";
+    byCat.set(key, (byCat.get(key) ?? 0) + Number(e.amount));
+  }
 
   // Por producto vendido en el período
   const byProduct = new Map<string, { units: number; revenue: number; cogs: number }>();
@@ -88,6 +101,12 @@ export function computeClosing(
       units: purchasesIn.reduce((n, p) => n + p.qty, 0),
       invested: money(purchasesIn.reduce((n, p) => n + p.qty * Number(p.unit_cost), 0)),
     },
+    expenses: {
+      count: expensesIn.length,
+      total: money(expensesTotal),
+      byCategory: [...byCat.entries()].map(([category, total]) => ({ category, total: money(total) })).sort((a, b) => b.total - a.total),
+    },
+    net: money(profit - expensesTotal),
     stock: { units: stockUnits, cost: money(stockCost), saleValue: money(stockSale) },
     top,
     byChannel: [...channels.entries()].map(([channel, v]) => ({ channel, units: v.units, revenue: money(v.revenue) })).sort((a, b) => b.revenue - a.revenue),

@@ -2,6 +2,17 @@ import { cache } from "react";
 import { DEFAULT_CATEGORIES, getCategories, type Category, type CategoryId } from "./categories";
 import { getPublicClient } from "./supabase/public";
 
+/** Un estilo de un producto (ej. “Gatitos” de la pijama), con sus propias fotos y stock. */
+export type ProductVariant = {
+  id: string;
+  name: string;
+  /** Fotos del estilo (la primera es la principal) */
+  images: string[];
+  image?: string;
+  stock: number;
+  inStock: boolean;
+};
+
 export type Product = {
   slug: string;
   name: string;
@@ -20,6 +31,8 @@ export type Product = {
   video?: string;
   badge?: string;
   sizes?: string[];
+  /** Estilos del producto. Si hay, el cliente elige uno o varios al comprar. */
+  variants?: ProductVariant[];
   /** false = agotado */
   inStock?: boolean;
   /** Unidades disponibles en bodega */
@@ -46,27 +59,53 @@ export type ProductRow = {
   updated_at: string;
 };
 
+/** Fila de la tabla `product_variants` en Supabase. */
+export type VariantRow = {
+  id: string;
+  product_id: string;
+  name: string;
+  images: string[] | null;
+  sort_order: number;
+  active: boolean;
+  stock: number;
+};
+
+export function rowToVariant(row: VariantRow): ProductVariant {
+  const images = row.images ?? [];
+  return { id: row.id, name: row.name, images, image: images[0], stock: row.stock, inStock: row.stock > 0 };
+}
+
 /** Agrega el nombre y el ícono de la categoría a un producto. */
 function withCategory(product: Product, categories: Category[]): Product {
   const cat = categories.find((c) => c.id === product.category);
   return { ...product, categoryLabel: cat?.label, categoryIcon: cat?.icon };
 }
 
-export function rowToProduct(row: ProductRow, categories: Category[] = DEFAULT_CATEGORIES): Product {
+export function rowToProduct(
+  row: ProductRow,
+  categories: Category[] = DEFAULT_CATEGORIES,
+  variantRows: VariantRow[] = [],
+): Product {
   const images = row.images ?? [];
+  const variants = variantRows.filter((v) => v.active).map(rowToVariant);
+  const hasVariants = variants.length > 0;
+  // Con estilos, el stock que importa es la suma de los estilos visibles.
+  const stock = hasVariants ? variants.reduce((n, v) => n + v.stock, 0) : row.stock;
   return withCategory({
     slug: row.slug,
     name: row.name,
     description: row.description,
     price: Number(row.price),
     category: row.category as CategoryId,
-    image: images[0],
+    // Si el producto no tiene fotos generales, se usa la primera foto de algún estilo.
+    image: images[0] ?? variants.find((v) => v.image)?.image,
     images,
     video: row.video_url ?? undefined,
     badge: row.badge ?? undefined,
     sizes: row.sizes && row.sizes.length > 0 ? row.sizes : undefined,
-    stock: row.stock,
-    inStock: row.stock > 0,
+    variants: hasVariants ? variants : undefined,
+    stock,
+    inStock: stock > 0,
     featured: row.featured,
   }, categories);
 }
@@ -173,7 +212,22 @@ export const getProducts = cache(async (): Promise<Product[]> => {
     console.error("No se pudieron cargar los productos:", error?.message);
     return [];
   }
-  return (data as ProductRow[]).map((row) => rowToProduct(row, categories));
+
+  // Estilos de los productos. Si todavía no corriste variantes-y-pedidos.sql, la tienda sigue
+  // funcionando igual que antes (sin estilos).
+  const { data: variantData, error: variantError } = await supabase
+    .from("product_variants")
+    .select("id, product_id, name, images, sort_order, active, stock")
+    .eq("active", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (variantError) console.warn("Estilos no disponibles:", variantError.message);
+
+  const byProduct = new Map<string, VariantRow[]>();
+  for (const v of (variantData ?? []) as VariantRow[]) {
+    byProduct.set(v.product_id, [...(byProduct.get(v.product_id) ?? []), v]);
+  }
+  return (data as ProductRow[]).map((row) => rowToProduct(row, categories, byProduct.get(row.id)));
 });
 
 export async function getProduct(slug: string) {

@@ -11,11 +11,13 @@ export default function StockIntake({
   categories,
   options,
   initialProductId,
+  initialVariantId,
 }: {
   today: string;
   categories: Category[];
   options: PurchaseOption[];
   initialProductId?: string;
+  initialVariantId?: string;
 }) {
   const canRestock = options.length > 0;
   const [mode, setMode] = useState<"nuevo" | "reponer">(initialProductId && canRestock ? "reponer" : "nuevo");
@@ -41,7 +43,7 @@ export default function StockIntake({
       {mode === "nuevo" ? (
         <ReceiveStockForm today={today} categories={categories} />
       ) : (
-        <PurchaseForm options={options} today={today} initialProductId={initialProductId} />
+        <PurchaseForm options={options} today={today} initialProductId={initialProductId} initialVariantId={initialVariantId} />
       )}
     </div>
   );

@@ -15,5 +15,12 @@ export default async function PanelLayout({ children }: { children: ReactNode })
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin) redirect("/admin/login?error=permiso");
 
-  return <AdminShell email={data.user.email ?? ""}>{children}</AdminShell>;
+  // Pedidos pendientes para el numerito del menú (si aún no existe la tabla, queda en 0)
+  const { count } = await supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pendiente");
+
+  return (
+    <AdminShell email={data.user.email ?? ""} pendingOrders={count ?? 0}>
+      {children}
+    </AdminShell>
+  );
 }

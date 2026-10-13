@@ -11,7 +11,8 @@ import { formatDate, formatPct, formatQ } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function ResumenPage() {
-  const { error, rows, totals, sales, products } = await loadAdminData();
+  const { error, rows, totals, sales, products, expensesTotal } = await loadAdminData();
+  const net = Math.round((totals.profit - expensesTotal) * 100) / 100;
   const nameOf = new Map(products.map((p) => [p.id, p.name]));
 
   const attention = rows
@@ -37,6 +38,17 @@ export default async function ResumenPage() {
           tone={totals.profit > 0 ? "good" : totals.profit < 0 ? "bad" : "default"}
         />
         <StatCard label="Margen de ganancia" value={formatPct(totals.margin)} note="Ganancia ÷ ventas" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard label="Ganancia de ventas" value={formatQ(totals.profit)} note="Antes de gastos" />
+        <StatCard label="Gastos" value={formatQ(expensesTotal)} note="Bolsas, gasolina, stickers…" />
+        <StatCard
+          label="Ganancia después de gastos"
+          value={formatQ(net)}
+          note={net >= 0 ? "Sí estamos ganando" : "Todavía no se recuperan los gastos"}
+          tone={net > 0 ? "good" : net < 0 ? "bad" : "default"}
+        />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">

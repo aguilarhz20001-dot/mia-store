@@ -5,20 +5,29 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createPurchase } from "@/app/admin/actions";
 
-export type PurchaseOption = { id: string; name: string; lastCost: number | null };
+export type PurchaseOption = {
+  id: string;
+  name: string;
+  lastCost: number | null;
+  /** Estilos del producto (si tiene) */
+  variants: { id: string; name: string }[];
+};
 
 export default function PurchaseForm({
   options,
   today,
   initialProductId,
+  initialVariantId,
 }: {
   options: PurchaseOption[];
   today: string;
   initialProductId?: string;
+  initialVariantId?: string;
 }) {
   const router = useRouter();
   const first = options.find((o) => o.id === initialProductId);
   const [productId, setProductId] = useState(first?.id ?? "");
+  const [variantId, setVariantId] = useState(first?.variants.some((v) => v.id === initialVariantId) ? (initialVariantId ?? "") : "");
   const [qty, setQty] = useState("");
   const [unitCost, setUnitCost] = useState(first?.lastCost != null ? String(first.lastCost) : "");
   const [supplier, setSupplier] = useState("");
@@ -29,9 +38,12 @@ export default function PurchaseForm({
   const [busy, setBusy] = useState(false);
 
   const total = (Number(qty) || 0) * (Number(unitCost) || 0);
+  const selected = options.find((o) => o.id === productId);
+  const hasVariants = (selected?.variants.length ?? 0) > 0;
 
   function pickProduct(id: string) {
     setProductId(id);
+    setVariantId("");
     const opt = options.find((o) => o.id === id);
     if (opt?.lastCost != null) setUnitCost(String(opt.lastCost));
   }
@@ -43,6 +55,7 @@ export default function PurchaseForm({
     setBusy(true);
     const res = await createPurchase({
       product_id: productId,
+      variant_id: hasVariants ? variantId : null,
       qty: Number(qty),
       unit_cost: Number(unitCost),
       supplier: supplier || null,
@@ -74,6 +87,17 @@ export default function PurchaseForm({
             ))}
           </select>
         </div>
+        {hasVariants && (
+          <div className="sm:col-span-2">
+            <label htmlFor="p-variant" className="adm-label">Estilo</label>
+            <select id="p-variant" required className="input-field" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
+              <option value="">Elige un estilo…</option>
+              {selected!.variants.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label htmlFor="p-qty" className="adm-label">Cantidad</label>
           <input id="p-qty" required type="number" min={1} step={1} inputMode="numeric" className="input-field" value={qty} onChange={(e) => setQty(e.target.value)} />

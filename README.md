@@ -70,3 +70,14 @@ Mientras no estén configuradas, la tienda muestra los productos de ejemplo.
 El carrito se guarda en el navegador (localStorage). Al enviar el pedido se abre WhatsApp con el
 detalle, el total y los datos de entrega. Los pedidos no se descuentan solos de la bodega: cuando confirmes una
 venta por WhatsApp, regístrala en el panel (Ventas). No hay pagos en línea todavía.
+Cuando el cliente toca **Enviar pedido por WhatsApp**, el pedido se guarda en el sistema como **pendiente** (con su número, ej. «Pedido #12») y se abre WhatsApp con el mensaje.
+En `/admin/pedidos` lo ves y, cuando se concreta la venta, tocas **Marcar vendido**: se registran las ventas, se descuenta el stock y entra a tus cuadres.
+Si el cliente no compra, tocas **Cancelar** y el stock no se mueve. Si te equivocas, **Deshacer venta** devuelve las unidades a la bodega.
+
+## Estilos (variantes) de un producto
+
+En `/admin/productos` → editar un producto → sección **Estilos**: agrega cada diseño con su nombre, sus fotos y sus unidades.
+En la tienda el cliente ve la foto de cada estilo, puede elegir varios estilos del mismo producto y cada uno lleva su propio stock.
+Las compras y ventas de un producto con estilos piden elegir de cuál estilo son.
+
+Para activar pedidos y estilos corre `supabase/variantes-y-pedidos.sql` una sola vez en el SQL Editor de Supabase.

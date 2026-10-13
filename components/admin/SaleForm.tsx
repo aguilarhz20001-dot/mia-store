@@ -6,11 +6,20 @@ import { Plus } from "lucide-react";
 import { createSale } from "@/app/admin/actions";
 import { SALE_CHANNELS } from "@/lib/admin/types";
 
-export type SaleOption = { id: string; name: string; stock: number; price: number; avgCost: number };
+export type SaleOption = {
+  id: string;
+  name: string;
+  stock: number;
+  price: number;
+  avgCost: number;
+  /** Estilos del producto con su propio stock (si tiene) */
+  variants: { id: string; name: string; stock: number }[];
+};
 
 export default function SaleForm({ options, today }: { options: SaleOption[]; today: string }) {
   const router = useRouter();
   const [productId, setProductId] = useState("");
+  const [variantId, setVariantId] = useState("");
   const [qty, setQty] = useState("1");
   const [unitPrice, setUnitPrice] = useState("");
   const [customer, setCustomer] = useState("");
@@ -22,6 +31,9 @@ export default function SaleForm({ options, today }: { options: SaleOption[]; to
   const [busy, setBusy] = useState(false);
 
   const selected = options.find((o) => o.id === productId);
+  const hasVariants = (selected?.variants.length ?? 0) > 0;
+  const selectedVariant = selected?.variants.find((v) => v.id === variantId);
+  const maxQty = hasVariants ? selectedVariant?.stock : selected?.stock;
   const q = Number(qty) || 0;
   const price = Number(unitPrice) || 0;
   const revenue = q * price;
@@ -29,6 +41,7 @@ export default function SaleForm({ options, today }: { options: SaleOption[]; to
 
   function pickProduct(id: string) {
     setProductId(id);
+    setVariantId("");
     const opt = options.find((o) => o.id === id);
     if (opt) setUnitPrice(String(opt.price));
   }
@@ -40,6 +53,7 @@ export default function SaleForm({ options, today }: { options: SaleOption[]; to
     setBusy(true);
     const res = await createSale({
       product_id: productId,
+      variant_id: hasVariants ? variantId : null,
       qty: Number(qty),
       unit_price: Number(unitPrice),
       customer: customer || null,
@@ -74,9 +88,22 @@ export default function SaleForm({ options, today }: { options: SaleOption[]; to
             ))}
           </select>
         </div>
+        {hasVariants && (
+          <div className="sm:col-span-2">
+            <label htmlFor="s-variant" className="adm-label">Estilo</label>
+            <select id="s-variant" required className="input-field" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
+              <option value="">Elige un estilo…</option>
+              {selected!.variants.map((v) => (
+                <option key={v.id} value={v.id} disabled={v.stock <= 0}>
+                  {v.name} — {v.stock > 0 ? `${v.stock} en stock` : "agotado"}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label htmlFor="s-qty" className="adm-label">Cantidad</label>
-          <input id="s-qty" required type="number" min={1} max={selected?.stock} step={1} inputMode="numeric" className="input-field" value={qty} onChange={(e) => setQty(e.target.value)} />
+          <input id="s-qty" required type="number" min={1} max={maxQty} step={1} inputMode="numeric" className="input-field" value={qty} onChange={(e) => setQty(e.target.value)} />
         </div>
         <div>
           <label htmlFor="s-price" className="adm-label">Precio por unidad (Q)</label>

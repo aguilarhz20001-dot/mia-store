@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ProductRow } from "@/lib/products";
-import type { PurchaseRow, SaleRow } from "./types";
+import type { ExpenseRow, PurchaseRow, SaleRow, VariantRow } from "./types";
 import { buildStats } from "./stats";
 import { fetchCategories } from "@/lib/categories";
 
@@ -21,7 +21,7 @@ async function fetchAll<T>(page: (from: number, to: number) => Page): Promise<{ 
 
 /** Productos, compras y ventas completos (sin el límite de 1000 filas). */
 export async function loadRawData(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const [products, purchases, sales] = await Promise.all([
+  const [products, purchases, sales, variants, expenses] = await Promise.all([
     fetchAll<ProductRow>((a, b) => supabase.from("products").select("*").order("name").range(a, b)),
     fetchAll<PurchaseRow>((a, b) =>
       supabase.from("purchases").select("*").order("purchased_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
@@ -29,12 +29,24 @@ export async function loadRawData(supabase: Awaited<ReturnType<typeof createClie
     fetchAll<SaleRow>((a, b) =>
       supabase.from("sales").select("*").order("sold_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
     ),
+    // Si todavía no corriste variantes-y-pedidos.sql esta tabla no existe: se ignora sin romper el panel.
+    fetchAll<VariantRow>((a, b) =>
+      supabase.from("product_variants").select("*").order("sort_order").order("created_at").range(a, b),
+    ),
+    // Si todavía no corriste gastos.sql esta tabla no existe: se ignora sin romper el panel.
+    fetchAll<ExpenseRow>((a, b) =>
+      supabase.from("expenses").select("*").order("spent_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
+    ),
   ]);
   return {
     error: products.error ?? purchases.error ?? sales.error,
     products: products.data,
     purchases: purchases.data,
     sales: sales.data,
+    variants: variants.error ? [] : variants.data,
+    expenses: expenses.error ? [] : expenses.data,
+    /** true si la tabla de gastos no existe todavía */
+    expensesMissing: !!expenses.error,
   };
 }
 
@@ -43,7 +55,7 @@ export async function loadAdminData() {
   const supabase = await createClient();
   const categories = await fetchCategories(supabase);
   const raw = await loadRawData(supabase);
-  const { error, products: productRows, purchases: purchaseRows, sales: saleRows } = raw;
+  const { error, products: productRows, purchases: purchaseRows, sales: saleRows, variants, expenses, expensesMissing } = raw;
 
   return {
     error,
@@ -51,6 +63,10 @@ export async function loadAdminData() {
     products: productRows,
     purchases: purchaseRows,
     sales: saleRows,
+    variants,
+    expenses,
+    expensesMissing,
+    expensesTotal: Math.round(expenses.reduce((n, e) => n + Number(e.amount), 0) * 100) / 100,
     ...buildStats(productRows, purchaseRows, saleRows),
   };
 }

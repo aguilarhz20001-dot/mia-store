@@ -4,7 +4,7 @@ import { formatPct, formatQ } from "@/lib/format";
 
 /** Muestra los números de un cuadre (en vivo o guardado). */
 export default function ClosingSummary({ data }: { data: ClosingSnapshot }) {
-  const { sales, purchases, stock, top, byChannel, notSold } = data;
+  const { sales, purchases, stock, top, byChannel, notSold, expenses, net } = data;
 
   return (
     <div className="space-y-6">
@@ -14,6 +14,18 @@ export default function ClosingSummary({ data }: { data: ClosingSnapshot }) {
         <StatCard label="Ganancia" value={formatQ(sales.profit)} note={`Margen ${formatPct(sales.margin)}`} tone={sales.profit >= 0 ? "good" : "bad"} />
         <StatCard label="Invertido en compras" value={formatQ(purchases.invested)} note={`${purchases.units} unidades · ${purchases.count} compras`} />
       </div>
+
+      {expenses && net !== undefined && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <StatCard label="Gastos del período" value={formatQ(expenses.total)} note={`${expenses.count} gastos (bolsas, gasolina, etc.)`} />
+          <StatCard
+            label="Ganancia después de gastos"
+            value={formatQ(net)}
+            note="Ganancia de ventas − gastos"
+            tone={net > 0 ? "good" : net < 0 ? "bad" : "default"}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="En bodega al final" value={`${stock.units} u.`} />

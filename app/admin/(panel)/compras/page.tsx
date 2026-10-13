@@ -11,7 +11,8 @@ import { formatDate, formatQ } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function ComprasPage() {
-  const { error, products, purchases, rows, totals } = await loadAdminData();
+  const { error, products, purchases, variants, rows, totals } = await loadAdminData();
+  const variantName = new Map(variants.map((v) => [v.id, v.name]));
 
   const nameOf = new Map(products.map((p) => [p.id, p.name]));
   const potential = rows.reduce((n, r) => n + r.stockSaleValue, 0);
@@ -59,6 +60,9 @@ export default async function ComprasPage() {
                   <td className="whitespace-nowrap">{formatDate(p.purchased_at)}</td>
                   <td className="font-medium text-brand-ink">
                     {nameOf.get(p.product_id) ?? "Producto"}
+                    {p.variant_id && variantName.get(p.variant_id) && (
+                      <span className="font-normal text-brand-ink/60"> · {variantName.get(p.variant_id)}</span>
+                    )}
                     {p.notes && <div className="text-xs font-normal text-brand-ink/50">{p.notes}</div>}
                   </td>
                   <td>{p.supplier ?? "—"}</td>

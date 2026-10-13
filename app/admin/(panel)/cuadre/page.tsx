@@ -40,7 +40,7 @@ export default async function CuadrePage({ searchParams }: { searchParams: Promi
   const closings = (closingsRes.data ?? []) as ClosingRow[];
   const overlaps = closings.filter((c) => c.period_start <= end && c.period_end >= start);
 
-  const data = computeClosing(raw.products, raw.purchases, raw.sales, start, end);
+  const data = computeClosing(raw.products, raw.purchases, raw.sales, start, end, raw.expenses);
 
   const quick = [
     { label: "Esta quincena", ...quincenaOf(today) },

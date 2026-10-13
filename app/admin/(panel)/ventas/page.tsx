@@ -10,8 +10,9 @@ import { formatDate, formatPct, formatQ, todayGT } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function VentasPage() {
-  const { error, products, sales, rows, totals } = await loadAdminData();
+  const { error, products, sales, variants, rows, totals } = await loadAdminData();
   const nameOf = new Map(products.map((p) => [p.id, p.name]));
+  const variantName = new Map(variants.map((v) => [v.id, v.name]));
 
   const options = rows
     .filter((r) => r.product.active || r.stock > 0)
@@ -21,6 +22,9 @@ export default async function VentasPage() {
       stock: r.stock,
       price: Number(r.product.price),
       avgCost: r.avgCost,
+      variants: variants
+        .filter((v) => v.product_id === r.product.id)
+        .map((v) => ({ id: v.id, name: v.name, stock: v.stock })),
     }));
 
   return (
@@ -72,6 +76,9 @@ export default async function VentasPage() {
                     <td className="whitespace-nowrap">{formatDate(s.sold_at)}</td>
                     <td className="font-medium text-brand-ink">
                       {nameOf.get(s.product_id) ?? "Producto"}
+                      {s.variant_id && variantName.get(s.variant_id) && (
+                        <span className="font-normal text-brand-ink/60"> · {variantName.get(s.variant_id)}</span>
+                      )}
                       {s.notes && <div className="text-xs font-normal text-brand-ink/50">{s.notes}</div>}
                     </td>
                     <td>

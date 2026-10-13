@@ -5,12 +5,30 @@ import Image from "next/image";
 import { Play } from "lucide-react";
 import type { Product } from "@/lib/products";
 import ProductImage from "./ProductImage";
+import { useProductView } from "./ProductViewContext";
 
 type Item = { type: "image" | "video"; src: string };
 
-/** Fotos del producto con miniaturas y, si hay, su video promocional. */
+/**
+ * Fotos del producto con miniaturas y, si hay, su video promocional.
+ * Si el cliente toca un estilo, la galería pasa a mostrar las fotos de ese estilo.
+ */
 export default function ProductGallery({ product }: { product: Product }) {
-  const photos = product.images && product.images.length > 0 ? product.images : product.image ? [product.image] : [];
+  const { previewId } = useProductView();
+  const variant = product.variants?.find((v) => v.id === previewId);
+  const photos =
+    variant && variant.images.length > 0
+      ? variant.images
+      : product.images && product.images.length > 0
+        ? product.images
+        : product.image
+          ? [product.image]
+          : [];
+  // key: al cambiar de estilo la galería vuelve a la primera foto
+  return <GalleryView key={variant?.id ?? "general"} product={product} photos={photos} />;
+}
+
+function GalleryView({ product, photos }: { product: Product; photos: string[] }) {
   const items: Item[] = [
     ...photos.map((src) => ({ type: "image" as const, src })),
     ...(product.video ? [{ type: "video" as const, src: product.video }] : []),
