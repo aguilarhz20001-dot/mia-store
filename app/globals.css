@@ -217,7 +217,13 @@ a.card:hover .icon-badge,
   inset: 0;
   z-index: -10;
   pointer-events: none;
-  background: url("/fondo/garabatos.svg") center top / clamp(900px, 100%, 1500px) auto repeat-y;
+  /* Celular: el dibujo completo cabe en el ancho de la pantalla, así los garabatos de las orillas sí se ven */
+  background: url("/fondo/garabatos.svg") center top / 100% auto repeat-y;
+}
+@media (min-width: 640px) {
+  .site-doodles {
+    background-size: clamp(900px, 100%, 1500px) auto;
+  }
 }
 
 /* ---------- Panel administrativo ---------- */

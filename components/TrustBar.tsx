@@ -9,23 +9,23 @@ const ITEMS = [
 ];
 
 /**
- * `compact`: versión miniatura 2×2 para meter bajo los botones, en el centro del hero (celular).
+ * `compact`: 4 tarjetas en una sola fila (celular y tablet).
  * Sin `compact`: fila de cuatro con separadores (pantallas grandes).
  */
 export default function TrustBar({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <Reveal delay={0.15}>
-        <ul className="grid grid-cols-2 gap-2">
+      <Reveal delay={0.1}>
+        <ul className="grid grid-cols-4 gap-2">
           {ITEMS.map(({ icon: Icon, label }) => (
             <li
               key={label}
-              className="flex flex-col items-center justify-start gap-1 rounded-xl bg-white/80 px-1.5 py-2 text-center shadow-sm shadow-brand-pink/15 ring-1 ring-brand-pink/20"
+              className="flex flex-col items-center justify-start gap-1.5 rounded-2xl bg-white/80 px-1 py-3 text-center shadow-sm shadow-brand-pink/15 ring-1 ring-brand-pink/20"
             >
-              <span className="icon-badge !h-8 !w-8">
-                <Icon className="h-4 w-4" strokeWidth={1.7} />
+              <span className="icon-badge !h-10 !w-10">
+                <Icon className="h-5 w-5" strokeWidth={1.6} />
               </span>
-              <span className="text-[10.5px] font-medium leading-tight text-brand-ink/80 text-balance">
+              <span className="text-[11px] font-medium leading-tight text-brand-ink/80 text-balance">
                 {label}
               </span>
             </li>
