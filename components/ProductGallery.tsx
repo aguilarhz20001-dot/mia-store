@@ -49,15 +49,17 @@ function GalleryView({ product, photos, styleName }: { product: Product; photos:
 
   return (
     <div>
-      <div className="card relative aspect-square overflow-hidden bg-white">
+      <div className="card relative overflow-hidden bg-brand-pink-light/40">
         {current.type === "image" ? (
+          // La foto se muestra completa y con su propia proporción: sin recortes y sin franjas blancas
           <Image
             key={current.src}
             src={current.src}
             alt={product.name}
-            fill
+            width={0}
+            height={0}
             sizes="(min-width: 768px) 50vw, 100vw"
-            className="object-contain"
+            className="block h-auto w-full"
             priority={index === 0}
           />
         ) : (
@@ -67,7 +69,7 @@ function GalleryView({ product, photos, styleName }: { product: Product; photos:
             controls
             playsInline
             preload="metadata"
-            className="absolute inset-0 h-full w-full bg-black object-contain"
+            className="block aspect-video w-full bg-black object-contain"
           />
         )}
         {styleName && (
