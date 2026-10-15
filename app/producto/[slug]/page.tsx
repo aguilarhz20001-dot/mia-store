@@ -33,20 +33,20 @@ export default async function ProductoPage({ params }: { params: Params }) {
   const related = all.filter((p) => p.category === product.category && p.slug !== product.slug).slice(0, 4);
 
   return (
-    <section className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+    <section className="max-w-6xl mx-auto px-4 sm:px-8 py-5 sm:py-10">
       <Link href="/tienda" className="inline-flex items-center gap-1 text-sm text-brand-pink-dark hover:underline">
         <ArrowLeft size={16} /> Volver a la tienda
       </Link>
 
       <ProductViewProvider>
-      <div className="mt-6 grid gap-10 md:grid-cols-2">
+      <div className="mt-3 grid gap-5 sm:mt-6 md:grid-cols-2 md:gap-10">
         <ProductGallery product={product} />
 
         <div>
           <span className="text-sm font-medium text-brand-lilac-dark">{product.categoryLabel}</span>
-          <h1 className="mt-1 text-3xl sm:text-4xl font-bold text-brand-ink">{product.name}</h1>
-          <p className="mt-3 text-3xl font-bold text-brand-pink-dark">{formatQ(product.price)}</p>
-          <p className="mt-4 text-brand-ink/70 leading-relaxed">{product.description}</p>
+          <h1 className="mt-0.5 text-2xl sm:text-4xl font-bold text-brand-ink">{product.name}</h1>
+          <p className="mt-1 text-2xl sm:mt-3 sm:text-3xl font-bold text-brand-pink-dark">{formatQ(product.price)}</p>
+          <p className="mt-3 text-sm sm:mt-4 sm:text-base text-brand-ink/70 leading-relaxed">{product.description}</p>
 
           <ProductBuy product={product} />
 
@@ -60,7 +60,7 @@ export default async function ProductoPage({ params }: { params: Params }) {
       </ProductViewProvider>
 
       {related.length > 0 && (
-        <div className="mt-16">
+        <div className="mt-10 sm:mt-16">
           <h2 className="font-script text-4xl text-brand-ink">También te puede gustar</h2>
           <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {related.map((p) => (

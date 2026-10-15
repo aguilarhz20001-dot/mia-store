@@ -3,8 +3,12 @@ import { createClient } from "@/lib/supabase/client";
 const BUCKET = "productos";
 export const MAX_VIDEO_MB = 50;
 
-/** Reduce la foto a máx. 1600 px y la convierte a WebP (la tienda carga mucho más rápido). */
-async function resizeToWebp(file: File, maxSize = 1600): Promise<File> {
+/**
+ * Reduce la foto a máx. 1280 px y la convierte a WebP, bajando un poco la calidad si hace falta para que pese poco
+ * (meta: ~250 KB, sin bajar de una calidad que se note borrosa). La tienda ya la sirve recortada al tamaño de cada pantalla,
+ * pero así también ocupa menos en Storage y carga más rápido la primera vez.
+ */
+async function resizeToWebp(file: File, maxSize = 1280): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
     const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
@@ -16,8 +20,15 @@ async function resizeToWebp(file: File, maxSize = 1600): Promise<File> {
     const ctx = canvas.getContext("2d");
     if (!ctx) return file;
     ctx.drawImage(bitmap, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", 0.85));
+
+    let blob: Blob | null = null;
+    for (const quality of [0.85, 0.78, 0.72]) {
+      blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+      if (!blob || blob.size <= 250 * 1024) break;
+    }
     if (!blob) return file;
+    // si la original ya era más liviana, se queda la original
+    if (scale === 1 && file.type === "image/webp" && file.size <= blob.size) return file;
     return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
   } catch {
     return file;

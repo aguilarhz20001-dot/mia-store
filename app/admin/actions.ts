@@ -360,6 +360,56 @@ export async function deleteClosing(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/**
+ * Corrige el stock a la cantidad real. Solo sirve para BAJARLO (por si pusiste de más):
+ * se le quita lo que sobra a las compras más recientes de ese producto/estilo, así el costo
+ * promedio y las ganancias quedan bien. Para subirlo hay que registrar una compra (Reponer).
+ */
+export async function setStock(input: { product_id: string; variant_id: string | null; target: number }): Promise<ActionResult> {
+  const supabase = await getAdminClient();
+  if (!supabase) return NO_SESSION;
+  if (!Number.isInteger(input.target) || input.target < 0) return { ok: false, error: "El stock debe ser un número entero, 0 o más." };
+
+  const { data: product, error: pError } = await supabase.from("products").select("id").eq("id", input.product_id).maybeSingle();
+  if (pError) return { ok: false, error: pError.message };
+  if (!product) return { ok: false, error: "No se encontró el producto." };
+
+  const { count: styles } = await supabase.from("product_variants").select("id", { count: "exact", head: true }).eq("product_id", input.product_id);
+  if ((styles ?? 0) > 0 && !input.variant_id) return { ok: false, error: "Este producto tiene estilos: corrige el stock de cada estilo." };
+
+  const scope = (q: any) => (input.variant_id ? q.eq("variant_id", input.variant_id) : q.eq("product_id", input.product_id));
+
+  const { data: purchases, error: buyError } = await scope(supabase.from("purchases").select("id, qty, created_at").order("created_at", { ascending: false }));
+  if (buyError) return { ok: false, error: buyError.message };
+  const { data: sales, error: sellError } = await scope(supabase.from("sales").select("qty"));
+  if (sellError) return { ok: false, error: sellError.message };
+
+  const bought = (purchases ?? []).reduce((n: number, p: { qty: number }) => n + p.qty, 0);
+  const sold = (sales ?? []).reduce((n: number, s: { qty: number }) => n + s.qty, 0);
+  const current = bought - sold;
+
+  if (input.target === current) return { ok: true };
+  if (input.target > current) {
+    return { ok: false, error: `Ahora hay ${current}. Para subirlo registra una compra con «+ Reponer», así queda el costo.` };
+  }
+
+  let remaining = current - input.target; // unidades que sobran
+  for (const p of purchases ?? []) {
+    if (remaining <= 0) break;
+    if (p.qty <= remaining) {
+      const { error } = await supabase.from("purchases").delete().eq("id", p.id);
+      if (error) return { ok: false, error: friendly(error.message, error.code) };
+      remaining -= p.qty;
+    } else {
+      const { error } = await supabase.from("purchases").update({ qty: p.qty - remaining }).eq("id", p.id);
+      if (error) return { ok: false, error: friendly(error.message, error.code) };
+      remaining = 0;
+    }
+  }
+  refresh();
+  return { ok: true };
+}
+
 export async function deletePurchase(id: string): Promise<ActionResult> {
   const supabase = await getAdminClient();
   if (!supabase) return NO_SESSION;

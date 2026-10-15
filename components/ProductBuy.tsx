@@ -59,7 +59,7 @@ export default function ProductBuy({ product }: { product: Product }) {
   }
 
   return (
-    <div className="mt-6 space-y-5">
+    <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-5">
       {hasVariants && (
         <div>
           <p className="text-sm font-semibold text-brand-ink">
@@ -89,6 +89,7 @@ export default function ProductBuy({ product }: { product: Product }) {
                       <span className="block truncate font-medium text-brand-ink">{v.name}</span>
                       <span className="block text-xs text-brand-ink/55">
                         {!v.inStock ? "Agotado" : v.stock <= 3 ? `Quedan ${v.stock}` : "Disponible"}
+                        {viewing && <span className="ml-2 font-semibold text-brand-pink-dark">· Viendo</span>}
                       </span>
                     </span>
                   </button>

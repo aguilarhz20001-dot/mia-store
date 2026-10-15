@@ -4,6 +4,7 @@ import StatCard from "@/components/admin/StatCard";
 import ErrorNote from "@/components/admin/ErrorNote";
 import StockBadge from "@/components/admin/StockBadge";
 import StockIntake from "@/components/admin/StockIntake";
+import StockEditor from "@/components/admin/StockEditor";
 import DeleteProductButton from "@/components/admin/DeleteProductButton";
 import { loadAdminData } from "@/lib/admin/data";
 import { stockStatus } from "@/lib/admin/stats";
@@ -96,18 +97,15 @@ export default async function BodegaPage({ searchParams }: { searchParams: Promi
                     {(variantsOf.get(r.product.id) ?? []).length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {variantsOf.get(r.product.id)!.map((v) => (
-                          <span
-                            key={v.id}
-                            className={`rounded-full px-2 py-0.5 text-xs ${v.stock <= 0 ? "bg-red-100 text-red-700" : "bg-brand-lilac-light text-brand-lilac-dark"}`}
-                          >
-                            {v.name}: {v.stock}
-                          </span>
+                          <StockEditor key={v.id} productId={r.product.id} variantId={v.id} stock={v.stock} label={v.name} />
                         ))}
                       </div>
                     )}
                   </td>
                   <td><StockBadge stock={r.stock} /></td>
-                  <td className="num font-semibold">{r.stock}</td>
+                  <td className="num font-semibold">
+                    {(variantsOf.get(r.product.id) ?? []).length > 0 ? r.stock : <StockEditor productId={r.product.id} variantId={null} stock={r.stock} />}
+                  </td>
                   <td className="num">{r.bought > 0 ? formatQ(r.avgCost) : "—"}</td>
                   <td className="num">{formatQ(Number(r.product.price))}</td>
                   <td className={`num ${r.unitProfit < 0 ? "text-red-600" : ""}`}>{r.bought > 0 ? formatQ(r.unitProfit) : "—"}</td>

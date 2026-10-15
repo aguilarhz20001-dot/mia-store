@@ -25,10 +25,12 @@ export default function ProductGallery({ product }: { product: Product }) {
           ? [product.image]
           : [];
   // key: al cambiar de estilo la galería vuelve a la primera foto
-  return <GalleryView key={variant?.id ?? "general"} product={product} photos={photos} />;
+  // Solo se muestra el nombre si ese estilo tiene sus propias fotos (si no, se ven las generales)
+  const styleName = variant && variant.images.length > 0 ? variant.name : undefined;
+  return <GalleryView key={variant?.id ?? "general"} product={product} photos={photos} styleName={styleName} />;
 }
 
-function GalleryView({ product, photos }: { product: Product; photos: string[] }) {
+function GalleryView({ product, photos, styleName }: { product: Product; photos: string[]; styleName?: string }) {
   const items: Item[] = [
     ...photos.map((src) => ({ type: "image" as const, src })),
     ...(product.video ? [{ type: "video" as const, src: product.video }] : []),
@@ -55,7 +57,7 @@ function GalleryView({ product, photos }: { product: Product; photos: string[] }
             alt={product.name}
             fill
             sizes="(min-width: 768px) 50vw, 100vw"
-            className="object-cover"
+            className="object-contain"
             priority={index === 0}
           />
         ) : (
@@ -68,17 +70,23 @@ function GalleryView({ product, photos }: { product: Product; photos: string[] }
             className="absolute inset-0 h-full w-full bg-black object-contain"
           />
         )}
+        {styleName && (
+          <span className="pointer-events-none absolute bottom-2 left-2 max-w-[80%] truncate rounded-full bg-white/90 px-3 py-1 text-sm font-semibold text-brand-ink shadow-sm backdrop-blur">
+            <span className="font-normal text-brand-ink/60">Estilo: </span>
+            {styleName}
+          </span>
+        )}
       </div>
 
       {items.length > 1 && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 py-1 md:mt-3 md:flex-wrap">
           {items.map((item, i) => (
             <button
               key={item.src}
               type="button"
               onClick={() => setIndex(i)}
               aria-label={item.type === "video" ? "Ver video" : `Ver foto ${i + 1}`}
-              className={`relative h-16 w-16 overflow-hidden rounded-xl bg-white ring-2 transition ${
+              className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-2 transition md:h-16 md:w-16 ${
                 i === index ? "ring-brand-pink" : "ring-transparent hover:ring-brand-pink/40"
               }`}
             >
