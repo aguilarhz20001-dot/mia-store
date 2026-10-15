@@ -1,6 +1,6 @@
 // TODO: cambia estos datos por los reales de Mia Store
-export const WHATSAPP_DISPLAY = "+502 0000-0000";
-export const WHATSAPP_NUMBER = "50200000000";
+export const WHATSAPP_DISPLAY = "+502 3900-9547";
+export const WHATSAPP_NUMBER = "50239009547";
 export const FACEBOOK_URL = "https://www.facebook.com/";
 export const INSTAGRAM_URL = "https://www.instagram.com/";
 
