@@ -195,8 +195,11 @@ const SAMPLE_PRODUCTS: Product[] = [
   },
 ];
 
-/** Todos los productos visibles de la tienda (una sola consulta por visita). */
-export const getProducts = cache(async (): Promise<Product[]> => {
+/**
+ * Todos los productos activos, incluso los agotados (una sola consulta por visita).
+ * Sirve para abrir un producto por su enlace y para el carrito; las listas de la tienda usan getProducts.
+ */
+export const getAllProducts = cache(async (): Promise<Product[]> => {
   const supabase = getPublicClient();
   if (!supabase) return SAMPLE_PRODUCTS.map((p) => withCategory(p, DEFAULT_CATEGORIES));
   const categories = await getCategories();
@@ -230,8 +233,18 @@ export const getProducts = cache(async (): Promise<Product[]> => {
   return (data as ProductRow[]).map((row) => rowToProduct(row, categories, byProduct.get(row.id)));
 });
 
+/**
+ * Lo que se muestra en la tienda (inicio, catálogo, relacionados): solo productos con stock.
+ * Cuando se acaba lo último, el producto desaparece solo; al volver a ingresar mercadería, reaparece.
+ */
+export const getProducts = cache(async (): Promise<Product[]> => {
+  const products = await getAllProducts();
+  return products.filter((p) => p.inStock !== false);
+});
+
+/** Un producto por su enlace. Si está agotado todavía se puede abrir (se ve «Agotado»), pero no aparece en las listas. */
 export async function getProduct(slug: string) {
-  const products = await getProducts();
+  const products = await getAllProducts();
   return products.find((p) => p.slug === slug);
 }
 

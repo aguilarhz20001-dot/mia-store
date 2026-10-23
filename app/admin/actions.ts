@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult } from "@/lib/admin/types";
+import { computeCash } from "@/lib/admin/cash";
+import type { ActionResult, PaidFrom } from "@/lib/admin/types";
 import { slugify } from "@/lib/format";
 import { loadRawData } from "@/lib/admin/data";
 import { computeClosing } from "@/lib/admin/closing";
@@ -32,6 +33,10 @@ export type PurchaseInput = {
   supplier: string | null;
   purchased_at: string;
   notes: string | null;
+  /** Con qué dinero se pagó. Si no se indica, se toma de la caja. */
+  paid_from?: PaidFrom;
+  /** Si se escribe, se crea este estilo nuevo en el producto y la compra queda en él. */
+  new_variant_name?: string | null;
 };
 
 export type ReceiveStockInput = {
@@ -42,6 +47,7 @@ export type ReceiveStockInput = {
   supplier: string | null;
   purchased_at: string;
   notes: string | null;
+  paid_from?: PaidFrom;
 };
 
 export type CategoryInput = {
@@ -64,6 +70,7 @@ export type ExpenseInput = {
   amount: number;
   spent_at: string;
   notes: string | null;
+  paid_from?: PaidFrom;
 };
 
 export type SaleInput = {
@@ -172,6 +179,15 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+/** Si falta la columna/tabla de la caja, explica qué hacer. */
+function cashError(message: string, code?: string) {
+  if (code === "PGRST204" || code === "42703" || code === "PGRST205" || code === "42P01")
+    return "Falta activar la caja. Corre el archivo supabase/caja.sql en el SQL Editor de Supabase y vuelve a intentar.";
+  return message;
+}
+
+const paidFromOf = (v?: PaidFrom): PaidFrom => (v === "personal" ? "personal" : "caja");
+
 export async function createPurchase(input: PurchaseInput): Promise<ActionResult> {
   const supabase = await getAdminClient();
   if (!supabase) return NO_SESSION;
@@ -179,16 +195,48 @@ export async function createPurchase(input: PurchaseInput): Promise<ActionResult
   if (!Number.isInteger(input.qty) || input.qty <= 0) return { ok: false, error: "La cantidad debe ser un número entero mayor a 0." };
   if (!Number.isFinite(input.unit_cost) || input.unit_cost < 0) return { ok: false, error: "El costo por unidad no es válido." };
 
+  // Estilo nuevo: se crea primero (solo en productos que ya tienen estilos) y la compra se anota en él.
+  let variantId = input.variant_id || null;
+  let createdVariantId: string | null = null;
+  const newName = input.new_variant_name?.trim();
+  if (newName) {
+    const { data: existing, error: existingError } = await supabase
+      .from("product_variants")
+      .select("sort_order")
+      .eq("product_id", input.product_id)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+    if (existingError) return { ok: false, error: variantError(existingError.message, existingError.code) };
+    if (!existing || existing.length === 0) {
+      return { ok: false, error: "Este producto todavía no tiene estilos. Agrégalos primero desde Productos." };
+    }
+    const { data: created, error: createError } = await supabase
+      .from("product_variants")
+      .insert({ product_id: input.product_id, name: newName, images: [], active: true, sort_order: ((existing[0].sort_order as number) ?? -1) + 1 })
+      .select("id")
+      .single();
+    if (createError) {
+      if (createError.code === "23505") return { ok: false, error: `Ya existe un estilo llamado «${newName}». Elígelo de la lista.` };
+      return { ok: false, error: variantError(createError.message, createError.code) };
+    }
+    createdVariantId = created.id as string;
+    variantId = createdVariantId;
+  }
+
   const { error } = await supabase.from("purchases").insert({
     product_id: input.product_id,
-    variant_id: input.variant_id || null,
+    variant_id: variantId,
     qty: input.qty,
     unit_cost: input.unit_cost,
     supplier: input.supplier?.trim() || null,
     purchased_at: input.purchased_at,
     notes: input.notes?.trim() || null,
+    paid_from: paidFromOf(input.paid_from),
   });
-  if (error) return { ok: false, error: friendly(error.message, error.code) };
+  if (error) {
+    if (createdVariantId) await supabase.from("product_variants").delete().eq("id", createdVariantId); // no dejar un estilo vacío a medias
+    return { ok: false, error: cashError(friendly(error.message, error.code), error.code) };
+  }
   refresh();
   return { ok: true };
 }
@@ -232,10 +280,11 @@ export async function receiveNewStock(input: ReceiveStockInput): Promise<ActionR
     supplier: input.supplier?.trim() || null,
     purchased_at: input.purchased_at,
     notes: input.notes?.trim() || null,
+    paid_from: paidFromOf(input.paid_from),
   });
   if (purchaseError) {
     await supabase.from("products").delete().eq("id", productId); // no dejar un producto vacío a medias
-    return { ok: false, error: friendly(purchaseError.message, purchaseError.code) };
+    return { ok: false, error: cashError(friendly(purchaseError.message, purchaseError.code), purchaseError.code) };
   }
 
   refresh();
@@ -339,7 +388,7 @@ export async function saveClosing(input: ClosingInput): Promise<ActionResult> {
 
   const raw = await loadRawData(supabase);
   if (raw.error) return { ok: false, error: raw.error };
-  const snapshot = computeClosing(raw.products, raw.purchases, raw.sales, input.start, input.end, raw.expenses);
+  const snapshot = computeClosing(raw.products, raw.purchases, raw.sales, input.start, input.end, raw.expenses, raw.variants);
 
   const { data, error } = await supabase
     .from("closings")
@@ -439,8 +488,9 @@ export async function createExpense(input: ExpenseInput): Promise<ActionResult> 
     amount: input.amount,
     spent_at: input.spent_at,
     notes: input.notes?.trim() || null,
+    paid_from: paidFromOf(input.paid_from),
   });
-  if (error) return { ok: false, error: expenseError(error.message, error.code) };
+  if (error) return { ok: false, error: cashError(expenseError(error.message, error.code), error.code) };
   refresh();
   return { ok: true };
 }
@@ -450,6 +500,60 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
   if (!supabase) return NO_SESSION;
   const { error } = await supabase.from("expenses").delete().eq("id", id);
   if (error) return { ok: false, error: expenseError(error.message, error.code) };
+  refresh();
+  return { ok: true };
+}
+
+function cashTableError(message: string, code?: string) {
+  if (code === "PGRST205" || code === "42P01") return cashError(message, code);
+  return message;
+}
+
+/** Mete o saca dinero de la caja (ej. "Dinero inicial", "Pusimos de nuestro bolsillo", "Retiro de ganancia"). */
+export async function createCashMovement(input: { kind: "deposito" | "retiro"; amount: number; concept: string; moved_at: string }): Promise<ActionResult> {
+  const supabase = await getAdminClient();
+  if (!supabase) return NO_SESSION;
+  const concept = input.concept.trim();
+  if (input.kind !== "deposito" && input.kind !== "retiro") return { ok: false, error: "Elige si metes o sacas dinero." };
+  if (!concept) return { ok: false, error: "Escribe el motivo (ej. dinero inicial, retiro de ganancia)." };
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return { ok: false, error: "El monto debe ser mayor a 0." };
+  if (!isValidDate(input.moved_at)) return { ok: false, error: "La fecha no es válida." };
+
+  const { error } = await supabase.from("cash_movements").insert({ kind: input.kind, amount: input.amount, concept, moved_at: input.moved_at });
+  if (error) return { ok: false, error: cashTableError(error.message, error.code) };
+  refresh();
+  return { ok: true };
+}
+
+export async function deleteCashMovement(id: string): Promise<ActionResult> {
+  const supabase = await getAdminClient();
+  if (!supabase) return NO_SESSION;
+  const { error } = await supabase.from("cash_movements").delete().eq("id", id);
+  if (error) return { ok: false, error: cashTableError(error.message, error.code) };
+  refresh();
+  return { ok: true };
+}
+
+/** "Contar la caja": se escribe cuánto hay de verdad y el sistema registra la diferencia como ajuste. */
+export async function countCash(input: { real: number; today: string }): Promise<ActionResult> {
+  const supabase = await getAdminClient();
+  if (!supabase) return NO_SESSION;
+  if (!Number.isFinite(input.real) || input.real < 0) return { ok: false, error: "Escribe cuánto dinero hay en la caja (0 o más)." };
+  if (!isValidDate(input.today)) return { ok: false, error: "La fecha no es válida." };
+
+  const raw = await loadRawData(supabase);
+  if (raw.cashMissing) return { ok: false, error: cashError("", "42P01") };
+  const { balance } = computeCash(raw.purchases, raw.sales, raw.expenses, raw.cashMovements);
+  const diff = Math.round((input.real - balance) * 100) / 100;
+  if (diff === 0) return { ok: true };
+
+  const { error } = await supabase.from("cash_movements").insert({
+    kind: diff > 0 ? "deposito" : "retiro",
+    amount: Math.abs(diff),
+    concept: "Ajuste al contar la caja",
+    moved_at: input.today,
+  });
+  if (error) return { ok: false, error: cashTableError(error.message, error.code) };
   refresh();
   return { ok: true };
 }

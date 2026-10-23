@@ -1,10 +1,11 @@
 import StatCard from "./StatCard";
+import ProductSalesList from "./ProductSalesList";
 import type { ClosingSnapshot } from "@/lib/admin/closing";
 import { formatPct, formatQ } from "@/lib/format";
 
 /** Muestra los números de un cuadre (en vivo o guardado). */
 export default function ClosingSummary({ data }: { data: ClosingSnapshot }) {
-  const { sales, purchases, stock, top, byChannel, notSold, expenses, net } = data;
+  const { sales, purchases, stock, top, byChannel, notSold, expenses, net, byProduct } = data;
 
   return (
     <div className="space-y-6">
@@ -33,34 +34,44 @@ export default function ClosingSummary({ data }: { data: ClosingSnapshot }) {
         <StatCard label="Valor a precio de venta" value={formatQ(stock.saleValue)} note="Con el precio actual de cada producto" />
       </div>
 
+      {byProduct ? (
+        <section className="card overflow-hidden">
+          <div className="p-5 pb-3">
+            <h2 className="font-semibold text-brand-ink">Ventas por producto</h2>
+            <p className="text-sm text-brand-ink/55">Toca un producto para ver sus estilos y cada venta del período.</p>
+          </div>
+          <ProductSalesList groups={byProduct} emptyText="No hay ventas en este período." />
+        </section>
+      ) : (
       <section className="card overflow-hidden">
-        <div className="p-5 pb-3"><h2 className="font-semibold text-brand-ink">Más vendidos del período</h2></div>
-        <div className="overflow-x-auto">
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th className="num">Unidades</th>
-                <th className="num">Vendido</th>
-                <th className="num">Ganancia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {top.length === 0 && (
-                <tr><td colSpan={4} className="py-8 text-center text-brand-ink/50">No hay ventas en este período.</td></tr>
-              )}
-              {top.map((t) => (
-                <tr key={t.name}>
-                  <td className="font-medium text-brand-ink">{t.name}</td>
-                  <td className="num">{t.units}</td>
-                  <td className="num">{formatQ(t.revenue)}</td>
-                  <td className={`num ${t.profit < 0 ? "text-red-600" : ""}`}>{formatQ(t.profit)}</td>
+          <div className="p-5 pb-3"><h2 className="font-semibold text-brand-ink">Más vendidos del período</h2></div>
+          <div className="overflow-x-auto">
+            <table className="adm-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th className="num">Unidades</th>
+                  <th className="num">Vendido</th>
+                  <th className="num">Ganancia</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {top.length === 0 && (
+                  <tr><td colSpan={4} className="py-8 text-center text-brand-ink/50">No hay ventas en este período.</td></tr>
+                )}
+                {top.map((t) => (
+                  <tr key={t.name}>
+                    <td className="font-medium text-brand-ink">{t.name}</td>
+                    <td className="num">{t.units}</td>
+                    <td className="num">{formatQ(t.revenue)}</td>
+                    <td className={`num ${t.profit < 0 ? "text-red-600" : ""}`}>{formatQ(t.profit)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card p-5">

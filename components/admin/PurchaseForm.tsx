@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createPurchase } from "@/app/admin/actions";
+import type { PaidFrom } from "@/lib/admin/types";
+import PaidFromSelect from "./PaidFromSelect";
 
 export type PurchaseOption = {
   id: string;
@@ -12,6 +14,8 @@ export type PurchaseOption = {
   /** Estilos del producto (si tiene) */
   variants: { id: string; name: string }[];
 };
+
+const NEW_STYLE = "__nuevo__";
 
 export default function PurchaseForm({
   options,
@@ -28,11 +32,13 @@ export default function PurchaseForm({
   const first = options.find((o) => o.id === initialProductId);
   const [productId, setProductId] = useState(first?.id ?? "");
   const [variantId, setVariantId] = useState(first?.variants.some((v) => v.id === initialVariantId) ? (initialVariantId ?? "") : "");
+  const [newStyle, setNewStyle] = useState("");
   const [qty, setQty] = useState("");
   const [unitCost, setUnitCost] = useState(first?.lastCost != null ? String(first.lastCost) : "");
   const [supplier, setSupplier] = useState("");
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState("");
+  const [paidFrom, setPaidFrom] = useState<PaidFrom>("caja");
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,19 +61,23 @@ export default function PurchaseForm({
     setBusy(true);
     const res = await createPurchase({
       product_id: productId,
-      variant_id: hasVariants ? variantId : null,
+      variant_id: hasVariants && variantId !== NEW_STYLE ? variantId : null,
+      new_variant_name: hasVariants && variantId === NEW_STYLE ? newStyle : null,
       qty: Number(qty),
       unit_cost: Number(unitCost),
       supplier: supplier || null,
       purchased_at: date,
       notes: notes || null,
+      paid_from: paidFrom,
     });
     setBusy(false);
     if (!res.ok) {
       setError(res.error);
       return;
     }
-    setOk("Compra registrada. El stock ya se actualizó.");
+    setOk(variantId === NEW_STYLE ? `Estilo «${newStyle.trim()}» creado y compra registrada. Ya puedes ponerle fotos en Productos.` : "Compra registrada. El stock ya se actualizó.");
+    setVariantId("");
+    setNewStyle("");
     setQty("");
     setNotes("");
     router.refresh();
@@ -95,7 +105,19 @@ export default function PurchaseForm({
               {selected!.variants.map((v) => (
                 <option key={v.id} value={v.id}>{v.name}</option>
               ))}
+              <option value={NEW_STYLE}>＋ Nuevo estilo…</option>
             </select>
+            {variantId === NEW_STYLE && (
+              <input
+                required
+                autoFocus
+                aria-label="Nombre del estilo nuevo"
+                placeholder="Nombre del estilo nuevo (ej. Corazones)"
+                className="input-field mt-2"
+                value={newStyle}
+                onChange={(e) => setNewStyle(e.target.value)}
+              />
+            )}
           </div>
         )}
         <div>
@@ -114,6 +136,7 @@ export default function PurchaseForm({
           <label htmlFor="p-date" className="adm-label">Fecha</label>
           <input id="p-date" required type="date" className="input-field" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
+        <PaidFromSelect id="p-paid" value={paidFrom} onChange={setPaidFrom} />
         <div className="sm:col-span-2">
           <label htmlFor="p-notes" className="adm-label">Notas (opcional)</label>
           <input id="p-notes" className="input-field" value={notes} onChange={(e) => setNotes(e.target.value)} />

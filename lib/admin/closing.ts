@@ -1,5 +1,6 @@
 import type { ProductRow } from "@/lib/products";
-import type { ExpenseRow, PurchaseRow, SaleRow } from "./types";
+import type { ExpenseRow, PurchaseRow, SaleRow, VariantRow } from "./types";
+import { groupSalesByProduct, type ProductSalesGroup } from "./salesByProduct";
 
 /** Foto de los números de un período. Se guarda tal cual al cerrar un cuadre. */
 export type ClosingSnapshot = {
@@ -12,6 +13,8 @@ export type ClosingSnapshot = {
   net?: number;
   /** Lo que quedó en bodega al final del período (valorado al precio de venta actual) */
   stock: { units: number; cost: number; saleValue: number };
+  /** Lo vendido de cada producto (con estilos y cada venta), igual que en Ventas. Opcional: los cuadres viejos no lo traen. */
+  byProduct?: ProductSalesGroup[];
   top: { name: string; units: number; revenue: number; profit: number }[];
   byChannel: { channel: string; units: number; revenue: number }[];
   /** Productos que quedaron con stock pero no se vendieron en el período */
@@ -27,6 +30,7 @@ export function computeClosing(
   start: string,
   end: string,
   expenses: ExpenseRow[] = [],
+  variants: VariantRow[] = [],
 ): ClosingSnapshot {
   const inRange = (d: string) => d >= start && d <= end;
   const salesIn = sales.filter((s) => inRange(s.sold_at));
@@ -108,6 +112,7 @@ export function computeClosing(
     },
     net: money(profit - expensesTotal),
     stock: { units: stockUnits, cost: money(stockCost), saleValue: money(stockSale) },
+    byProduct: groupSalesByProduct(salesIn, products, variants, false),
     top,
     byChannel: [...channels.entries()].map(([channel, v]) => ({ channel, units: v.units, revenue: money(v.revenue) })).sort((a, b) => b.revenue - a.revenue),
     notSold: notSold.sort((a, b) => a.localeCompare(b)).slice(0, 30),

@@ -13,23 +13,42 @@ import {
   Tags,
   ClipboardCheck,
   Receipt,
+  Wallet,
   ShoppingCart,
   ExternalLink,
   LogOut,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 
-const NAV = [
-  { href: "/admin", label: "Resumen", icon: LayoutDashboard },
-  { href: "/admin/productos", label: "Productos", icon: Package },
-  { href: "/admin/bodega", label: "Bodega", icon: Warehouse },
-  { href: "/admin/compras", label: "Compras", icon: PackagePlus },
-  { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
-  { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
-  { href: "/admin/gastos", label: "Gastos", icon: Receipt },
-  { href: "/admin/cuadre", label: "Cuadre", icon: ClipboardCheck },
-  { href: "/admin/categorias", label: "Categorías", icon: Tags },
+const NAV_GROUPS = [
+  { title: null, items: [{ href: "/admin", label: "Resumen", icon: LayoutDashboard }] },
+  {
+    title: "Tienda",
+    items: [
+      { href: "/admin/productos", label: "Productos", icon: Package },
+      { href: "/admin/categorias", label: "Categorías", icon: Tags },
+      { href: "/admin/pedidos", label: "Pedidos", icon: ShoppingCart },
+    ],
+  },
+  {
+    title: "Inventario",
+    items: [
+      { href: "/admin/bodega", label: "Bodega", icon: Warehouse },
+      { href: "/admin/compras", label: "Compras", icon: PackagePlus },
+    ],
+  },
+  {
+    title: "Dinero",
+    items: [
+      { href: "/admin/ventas", label: "Ventas", icon: TrendingUp },
+      { href: "/admin/gastos", label: "Gastos", icon: Receipt },
+      { href: "/admin/caja", label: "Caja", icon: Wallet },
+      { href: "/admin/cuadre", label: "Cuadre", icon: ClipboardCheck },
+    ],
+  },
 ];
+
+const NAV = NAV_GROUPS.flatMap((g) => g.items);
 
 export default function AdminShell({
   email,
@@ -56,26 +75,31 @@ export default function AdminShell({
           </span>
         </Link>
 
-        <nav className="mt-8 flex flex-col gap-1">
-          {NAV.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive(href) ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                isActive(href)
-                  ? "bg-gradient-to-r from-brand-pink to-brand-lilac text-white shadow-sm"
-                  : "text-brand-ink/75 hover:bg-brand-pink-light"
-              }`}
-            >
-              <Icon size={18} />
-              {label}
-              {href === "/admin/pedidos" && pendingOrders > 0 && (
-                <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-pink-dark ring-1 ring-brand-pink/40">
-                  {pendingOrders}
-                </span>
-              )}
-            </Link>
+        <nav className="mt-6 flex flex-col gap-1 overflow-y-auto">
+          {NAV_GROUPS.map((group, i) => (
+            <div key={group.title ?? "inicio"} className={i === 0 ? "" : "mt-4"}>
+              {group.title && <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-brand-ink/40">{group.title}</p>}
+              {group.items.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={isActive(href) ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive(href)
+                      ? "bg-gradient-to-r from-brand-pink to-brand-lilac text-white shadow-sm"
+                      : "text-brand-ink/75 hover:bg-brand-pink-light"
+                  }`}
+                >
+                  <Icon size={18} />
+                  {label}
+                  {href === "/admin/pedidos" && pendingOrders > 0 && (
+                    <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-bold text-brand-pink-dark ring-1 ring-brand-pink/40">
+                      {pendingOrders}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 

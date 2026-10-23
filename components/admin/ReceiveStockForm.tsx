@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { PackagePlus } from "lucide-react";
 import { receiveNewStock } from "@/app/admin/actions";
 import type { Category } from "@/lib/categories";
+import type { PaidFrom } from "@/lib/admin/types";
+import PaidFromSelect from "./PaidFromSelect";
 
 export default function ReceiveStockForm({ today, categories }: { today: string; categories: Category[] }) {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function ReceiveStockForm({ today, categories }: { today: string;
   const [supplier, setSupplier] = useState("");
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState("");
+  const [paidFrom, setPaidFrom] = useState<PaidFrom>("caja");
   const [error, setError] = useState("");
   const [created, setCreated] = useState<{ id: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,6 +38,7 @@ export default function ReceiveStockForm({ today, categories }: { today: string;
       supplier: supplier || null,
       purchased_at: date,
       notes: notes || null,
+      paid_from: paidFrom,
     });
     setBusy(false);
     if (!res.ok) {
@@ -86,6 +90,7 @@ export default function ReceiveStockForm({ today, categories }: { today: string;
           <label htmlFor="r-date" className="adm-label">Fecha</label>
           <input id="r-date" required type="date" className="input-field" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
+        <PaidFromSelect id="r-paid" value={paidFrom} onChange={setPaidFrom} />
         <div className="sm:col-span-2">
           <label htmlFor="r-notes" className="adm-label">Notas (opcional)</label>
           <input id="r-notes" className="input-field" value={notes} onChange={(e) => setNotes(e.target.value)} />

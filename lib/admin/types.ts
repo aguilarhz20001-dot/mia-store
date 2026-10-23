@@ -1,3 +1,14 @@
+export type PaidFrom = "caja" | "personal";
+
+export type CashMovementRow = {
+  id: string;
+  kind: "deposito" | "retiro";
+  amount: number;
+  concept: string;
+  moved_at: string;
+  created_at: string;
+};
+
 export type PurchaseRow = {
   id: string;
   product_id: string;
@@ -7,6 +18,8 @@ export type PurchaseRow = {
   supplier: string | null;
   purchased_at: string;
   notes: string | null;
+  /** Con qué dinero se pagó (existe una vez corrido caja.sql) */
+  paid_from?: PaidFrom;
   created_at: string;
 };
 
@@ -32,6 +45,7 @@ export type ExpenseRow = {
   amount: number;
   spent_at: string;
   notes: string | null;
+  paid_from?: PaidFrom;
   created_at: string;
 };
 

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ProductRow } from "@/lib/products";
-import type { ExpenseRow, PurchaseRow, SaleRow, VariantRow } from "./types";
+import type { CashMovementRow, ExpenseRow, PurchaseRow, SaleRow, VariantRow } from "./types";
+import { computeCash } from "./cash";
 import { buildStats } from "./stats";
 import { fetchCategories } from "@/lib/categories";
 
@@ -21,7 +22,7 @@ async function fetchAll<T>(page: (from: number, to: number) => Page): Promise<{ 
 
 /** Productos, compras y ventas completos (sin el límite de 1000 filas). */
 export async function loadRawData(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const [products, purchases, sales, variants, expenses] = await Promise.all([
+  const [products, purchases, sales, variants, expenses, cash] = await Promise.all([
     fetchAll<ProductRow>((a, b) => supabase.from("products").select("*").order("name").range(a, b)),
     fetchAll<PurchaseRow>((a, b) =>
       supabase.from("purchases").select("*").order("purchased_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
@@ -37,6 +38,10 @@ export async function loadRawData(supabase: Awaited<ReturnType<typeof createClie
     fetchAll<ExpenseRow>((a, b) =>
       supabase.from("expenses").select("*").order("spent_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
     ),
+    // Si todavía no corriste caja.sql esta tabla no existe: se ignora sin romper el panel.
+    fetchAll<CashMovementRow>((a, b) =>
+      supabase.from("cash_movements").select("*").order("moved_at", { ascending: false }).order("created_at", { ascending: false }).range(a, b),
+    ),
   ]);
   return {
     error: products.error ?? purchases.error ?? sales.error,
@@ -47,6 +52,9 @@ export async function loadRawData(supabase: Awaited<ReturnType<typeof createClie
     expenses: expenses.error ? [] : expenses.data,
     /** true si la tabla de gastos no existe todavía */
     expensesMissing: !!expenses.error,
+    cashMovements: cash.error ? [] : cash.data,
+    /** true si la tabla de la caja no existe todavía */
+    cashMissing: !!cash.error,
   };
 }
 
@@ -55,7 +63,7 @@ export async function loadAdminData() {
   const supabase = await createClient();
   const categories = await fetchCategories(supabase);
   const raw = await loadRawData(supabase);
-  const { error, products: productRows, purchases: purchaseRows, sales: saleRows, variants, expenses, expensesMissing } = raw;
+  const { error, products: productRows, purchases: purchaseRows, sales: saleRows, variants, expenses, expensesMissing, cashMovements, cashMissing } = raw;
 
   return {
     error,
@@ -66,6 +74,8 @@ export async function loadAdminData() {
     variants,
     expenses,
     expensesMissing,
+    cashMissing,
+    cash: computeCash(purchaseRows, saleRows, expenses, cashMovements),
     expensesTotal: Math.round(expenses.reduce((n, e) => n + Number(e.amount), 0) * 100) / 100,
     ...buildStats(productRows, purchaseRows, saleRows),
   };

@@ -1,12 +1,13 @@
 import PageHero from "@/components/PageHero";
 import CartView from "@/components/CartView";
-import { getProducts } from "@/lib/products";
+import { getAllProducts } from "@/lib/products";
 
 export const metadata = { title: "Mi carrito — Mia Store" };
 export const revalidate = 60;
 
 export default async function CarritoPage() {
-  const products = await getProducts();
+  // Con todos los productos (también agotados) para que el carrito de alguien nunca pierda un artículo
+  const products = await getAllProducts();
 
   return (
     <>

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { createExpense } from "@/app/admin/actions";
-import { EXPENSE_CATEGORIES } from "@/lib/admin/types";
+import { EXPENSE_CATEGORIES, type PaidFrom } from "@/lib/admin/types";
+import PaidFromSelect from "./PaidFromSelect";
 
 export default function ExpenseForm({ today }: { today: string }) {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ExpenseForm({ today }: { today: string }) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState("");
+  const [paidFrom, setPaidFrom] = useState<PaidFrom>("caja");
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,6 +30,7 @@ export default function ExpenseForm({ today }: { today: string }) {
       amount: Number(amount),
       spent_at: date,
       notes: notes || null,
+      paid_from: paidFrom,
     });
     setBusy(false);
     if (!res.ok) {
@@ -67,7 +70,8 @@ export default function ExpenseForm({ today }: { today: string }) {
             ))}
           </select>
         </div>
-        <div className="sm:col-span-2 lg:col-span-3">
+        <PaidFromSelect id="e-paid" value={paidFrom} onChange={setPaidFrom} />
+        <div className="sm:col-span-2 lg:col-span-2">
           <label htmlFor="e-notes" className="adm-label">Notas (opcional)</label>
           <input id="e-notes" className="input-field" value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
