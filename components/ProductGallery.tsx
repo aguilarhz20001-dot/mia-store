@@ -64,7 +64,7 @@ function GalleryView({ product, photos, styleName }: { product: Product; photos:
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <div className="card relative overflow-hidden bg-brand-pink-light/40">
         {/* Carrusel: cada foto ocupa todo el ancho y se desliza con el dedo */}
         <div

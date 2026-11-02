@@ -39,10 +39,10 @@ export default async function ProductoPage({ params }: { params: Params }) {
       </Link>
 
       <ProductViewProvider initialId={product.variants?.find((v) => v.inStock)?.id}>
-      <div className="mt-3 grid gap-5 sm:mt-6 md:grid-cols-2 md:gap-10">
+      <div className="mt-3 grid grid-cols-1 gap-5 sm:mt-6 md:grid-cols-2 md:gap-10">
         <ProductGallery product={product} />
 
-        <div>
+        <div className="min-w-0">
           <span className="text-sm font-medium text-brand-lilac-dark">{product.categoryLabel}</span>
           <h1 className="mt-0.5 text-2xl sm:text-4xl font-bold text-brand-ink">{product.name}</h1>
           <p className="mt-1 text-2xl sm:mt-3 sm:text-3xl font-bold text-brand-pink-dark">{formatQ(product.price)}</p>
