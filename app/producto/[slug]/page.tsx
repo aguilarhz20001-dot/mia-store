@@ -38,7 +38,7 @@ export default async function ProductoPage({ params }: { params: Params }) {
         <ArrowLeft size={16} /> Volver a la tienda
       </Link>
 
-      <ProductViewProvider>
+      <ProductViewProvider initialId={product.variants?.find((v) => v.inStock)?.id}>
       <div className="mt-3 grid gap-5 sm:mt-6 md:grid-cols-2 md:gap-10">
         <ProductGallery product={product} />
 

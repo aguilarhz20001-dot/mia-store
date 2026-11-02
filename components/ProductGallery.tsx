@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { Play } from "lucide-react";
 import type { Product } from "@/lib/products";
@@ -10,7 +10,9 @@ import { useProductView } from "./ProductViewContext";
 type Item = { type: "image" | "video"; src: string };
 
 /**
- * Fotos del producto con miniaturas y, si hay, su video promocional.
+ * Fotos del producto y, si hay, su video promocional.
+ * - Celular: se desliza con el dedo y abajo hay puntitos que indican en qué foto vas.
+ * - Computadora: se cambia de foto con las miniaturas.
  * Si el cliente toca un estilo, la galería pasa a mostrar las fotos de ese estilo.
  */
 export default function ProductGallery({ product }: { product: Product }) {
@@ -36,6 +38,7 @@ function GalleryView({ product, photos, styleName }: { product: Product; photos:
     ...(product.video ? [{ type: "video" as const, src: product.video }] : []),
   ];
   const [index, setIndex] = useState(0);
+  const track = useRef<HTMLDivElement>(null);
 
   if (items.length === 0) {
     return (
@@ -45,50 +48,87 @@ function GalleryView({ product, photos, styleName }: { product: Product; photos:
     );
   }
 
-  const current = items[Math.min(index, items.length - 1)];
+  /** Mientras el cliente desliza, calcula en qué foto está para marcar el puntito. */
+  function handleScroll() {
+    const el = track.current;
+    if (!el || el.clientWidth === 0) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setIndex((prev) => (prev === i ? prev : Math.max(0, Math.min(items.length - 1, i))));
+  }
+
+  function goTo(i: number) {
+    const el = track.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
+    setIndex(i);
+  }
 
   return (
     <div>
       <div className="card relative overflow-hidden bg-brand-pink-light/40">
-        {current.type === "image" ? (
-          // La foto se muestra completa y con su propia proporción: sin recortes y sin franjas blancas
-          <Image
-            key={current.src}
-            src={current.src}
-            alt={product.name}
-            width={0}
-            height={0}
-            sizes="(min-width: 768px) 50vw, 100vw"
-            className="block h-auto w-full"
-            priority={index === 0}
-          />
-        ) : (
-          <video
-            key={current.src}
-            src={current.src}
-            controls
-            playsInline
-            preload="metadata"
-            className="block aspect-video w-full bg-black object-contain"
-          />
-        )}
+        {/* Carrusel: cada foto ocupa todo el ancho y se desliza con el dedo */}
+        <div
+          ref={track}
+          onScroll={handleScroll}
+          className="flex snap-x snap-mandatory items-center overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {items.map((item, i) => (
+            <div key={item.src} className="w-full shrink-0 snap-center snap-always">
+              {item.type === "image" ? (
+                // La foto se muestra completa y con su propia proporción: sin recortes
+                <Image
+                  src={item.src}
+                  alt={items.length > 1 ? `${product.name} — foto ${i + 1}` : product.name}
+                  width={0}
+                  height={0}
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  draggable={false}
+                  className="block h-auto w-full select-none"
+                  priority={i === 0}
+                />
+              ) : (
+                <video
+                  src={item.src}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="block aspect-video w-full bg-black object-contain"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
         {styleName && (
           <span className="pointer-events-none absolute bottom-2 left-2 max-w-[80%] truncate rounded-full bg-white/90 px-3 py-1 text-sm font-semibold text-brand-ink shadow-sm backdrop-blur">
             <span className="font-normal text-brand-ink/60">Estilo: </span>
             {styleName}
           </span>
         )}
+
+        {/* Puntitos (celular) */}
+        {items.length > 1 && (
+          <div className="pointer-events-none absolute bottom-2 right-3 flex gap-1.5 rounded-full bg-white/70 px-2 py-1 backdrop-blur md:hidden">
+            {items.map((item, i) => (
+              <span
+                key={item.src}
+                className={`h-2 rounded-full transition-all ${i === index ? "w-4 bg-brand-pink-dark" : "w-2 bg-brand-pink-dark/30"}`}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
+      {/* Miniaturas (solo computadora) */}
       {items.length > 1 && (
-        <div className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 py-1 md:mt-3 md:flex-wrap">
+        <div className="mt-3 hidden flex-wrap gap-2 px-1 py-1 md:flex">
           {items.map((item, i) => (
             <button
               key={item.src}
               type="button"
-              onClick={() => setIndex(i)}
+              onClick={() => goTo(i)}
               aria-label={item.type === "video" ? "Ver video" : `Ver foto ${i + 1}`}
-              className={`relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-2 transition md:h-16 md:w-16 ${
+              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white ring-2 transition ${
                 i === index ? "ring-brand-pink" : "ring-transparent hover:ring-brand-pink/40"
               }`}
             >

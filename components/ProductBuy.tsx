@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import type { Product, ProductVariant } from "@/lib/products";
@@ -10,6 +9,9 @@ import { formatQ } from "@/lib/format";
 import { useProductView } from "./ProductViewContext";
 
 const MAX_PER_LINE = 99;
+
+/** Colores de los puntitos de cada estilo (se repiten si hay más estilos que colores). */
+const DOT_COLORS = ["#d6338a", "#a58cf5", "#ff5fa8", "#1f3a8a", "#c026a3", "#7c5cd6"];
 
 export default function ProductBuy({ product }: { product: Product }) {
   const { previewId, setPreviewId } = useProductView();
@@ -21,8 +23,9 @@ export default function ProductBuy({ product }: { product: Product }) {
   const [error, setError] = useState("");
 
   const needsSize = !!product.sizes?.length;
-  const variants = product.variants ?? [];
-  const hasVariants = variants.length > 0;
+  // Los estilos agotados no se muestran al cliente
+  const variants = (product.variants ?? []).filter((v) => v.inStock);
+  const hasVariants = (product.variants ?? []).length > 0;
   const soldOut = product.inStock === false;
   const maxQty = product.stock && product.stock > 0 ? product.stock : MAX_PER_LINE;
 
@@ -36,6 +39,44 @@ export default function ProductBuy({ product }: { product: Product }) {
       return { ...prev, [v.id]: next };
     });
     if (delta > 0) setPreviewId(v.id);
+  }
+
+  /** Tocar un estilo solo muestra sus fotos; no lo agrega a la compra. */
+  function viewVariant(v: ProductVariant) {
+    setPreviewId(v.id);
+  }
+
+  /** El botón «Agregar» del estilo lo pone en la compra (1 unidad) y muestra sus fotos. */
+  function addVariant(v: ProductVariant) {
+    setError("");
+    setPreviewId(v.id);
+    setPicked((prev) => ((prev[v.id] ?? 0) > 0 ? prev : { ...prev, [v.id]: 1 }));
+  }
+
+  /** Contador de unidades de un estilo (+ / −). */
+  function stepper(v: ProductVariant, n: number) {
+    return (
+      <div className="flex items-center justify-between rounded-full border border-brand-pink/30 bg-white">
+        <button
+          type="button"
+          aria-label={`Menos ${v.name}`}
+          onClick={() => changeVariantQty(v, -1)}
+          className="flex h-8 w-9 items-center justify-center text-brand-pink-dark"
+        >
+          <Minus size={15} />
+        </button>
+        <span className="text-sm font-semibold">{n}</span>
+        <button
+          type="button"
+          aria-label={`Más ${v.name}`}
+          onClick={() => changeVariantQty(v, 1)}
+          disabled={n >= v.stock}
+          className="flex h-8 w-9 items-center justify-center text-brand-pink-dark disabled:opacity-30"
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+    );
   }
 
   function handleAdd() {
@@ -60,63 +101,89 @@ export default function ProductBuy({ product }: { product: Product }) {
 
   return (
     <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-5">
-      {hasVariants && (
+      {variants.length > 0 && (
         <div>
           <p className="text-sm font-semibold text-brand-ink">
-            Estilo <span className="font-normal text-brand-ink/60">(puedes elegir varios)</span>
+            Elige tu estilo <span className="font-normal text-brand-ink/60">(puedes elegir varios)</span>
           </p>
-          <ul className="mt-2 space-y-2">
-            {variants.map((v) => {
+          {/* Celular: tarjetas pequeñas que se deslizan de lado. Tablet y compu: cuadrícula. */}
+          <ul className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-2.5 sm:overflow-visible sm:px-0 sm:pb-0">
+            {variants.map((v, i) => {
               const n = picked[v.id] ?? 0;
+              const selected = n > 0;
               const viewing = previewId === v.id;
               return (
                 <li
                   key={v.id}
-                  className={`flex items-center gap-3 rounded-2xl border p-2 pr-3 transition-colors ${
-                    n > 0 ? "border-brand-pink bg-brand-pink-light/50" : viewing ? "border-brand-pink/60" : "border-brand-pink/20"
-                  } ${v.inStock ? "" : "opacity-60"}`}
+                  className={`w-[8.75rem] shrink-0 snap-start rounded-2xl border p-2.5 transition-colors sm:w-auto sm:p-3 ${
+                    selected
+                      ? "border-brand-pink bg-brand-pink-light/60"
+                      : viewing
+                        ? "border-brand-pink/60 bg-white"
+                        : "border-brand-pink/20 bg-white"
+                  }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setPreviewId(v.id)}
-                    aria-label={`Ver fotos del estilo ${v.name}`}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
-                  >
-                    <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-brand-pink-light to-brand-lilac-light">
-                      {v.image && <Image src={v.image} alt="" fill sizes="56px" className="object-cover" />}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-brand-ink">{v.name}</span>
-                      <span className="block text-xs text-brand-ink/55">
-                        {!v.inStock ? "Agotado" : v.stock <= 3 ? `Quedan ${v.stock}` : "Disponible"}
-                        {viewing && <span className="ml-2 font-semibold text-brand-pink-dark">· Viendo</span>}
+                  <div className="flex items-center gap-2">
+                    {/* Tocar el nombre = solo ver las fotos de este estilo */}
+                    <button
+                      type="button"
+                      onClick={() => viewVariant(v)}
+                      aria-label={`Ver fotos del estilo ${v.name}`}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left sm:gap-2.5"
+                    >
+                      <span
+                        className="h-3 w-3 shrink-0 rounded-full sm:h-3.5 sm:w-3.5"
+                        style={{ backgroundColor: DOT_COLORS[i % DOT_COLORS.length] }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-brand-ink sm:text-base">{v.name}</span>
+                        <span className="block text-xs text-brand-ink/55">
+                          {viewing ? (
+                            <span className="font-semibold text-brand-pink-dark">Viendo</span>
+                          ) : v.stock <= 3 ? (
+                            `Quedan ${v.stock}`
+                          ) : (
+                            "Disponible"
+                          )}
+                        </span>
                       </span>
-                    </span>
-                  </button>
+                    </button>
 
-                  {v.inStock && (
-                    <div className="inline-flex shrink-0 items-center rounded-full border border-brand-pink/30 bg-white">
+                    {selected && (
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-pink-dark text-white sm:h-6 sm:w-6">
+                        <Check size={13} strokeWidth={3} />
+                      </span>
+                    )}
+                    {/* Tablet y compu: «Agregar» al lado del nombre */}
+                    {!selected && (
                       <button
                         type="button"
-                        aria-label={`Menos ${v.name}`}
-                        onClick={() => changeVariantQty(v, -1)}
-                        disabled={n === 0}
-                        className="flex h-9 w-9 items-center justify-center text-brand-pink-dark disabled:opacity-30"
+                        onClick={() => addVariant(v)}
+                        aria-label={`Agregar el estilo ${v.name} a la compra`}
+                        className="hidden shrink-0 items-center gap-1 rounded-full border border-brand-pink/40 bg-white px-2.5 py-1 text-xs font-semibold text-brand-pink-dark hover:bg-brand-pink-light/60 sm:inline-flex"
                       >
-                        <Minus size={15} />
+                        <Plus size={13} /> Agregar
                       </button>
-                      <span className="w-6 text-center text-sm font-semibold">{n}</span>
+                    )}
+                  </div>
+
+                  {/* Celular: abajo siempre hay una sola fila (Agregar o el contador), así las tarjetas no cambian de alto */}
+                  <div className="mt-2 sm:hidden">
+                    {selected ? (
+                      stepper(v, n)
+                    ) : (
                       <button
                         type="button"
-                        aria-label={`Más ${v.name}`}
-                        onClick={() => changeVariantQty(v, 1)}
-                        disabled={n >= v.stock}
-                        className="flex h-9 w-9 items-center justify-center text-brand-pink-dark disabled:opacity-30"
+                        onClick={() => addVariant(v)}
+                        aria-label={`Agregar el estilo ${v.name} a la compra`}
+                        className="flex h-8 w-full items-center justify-center gap-1 rounded-full border border-brand-pink/40 bg-white text-xs font-semibold text-brand-pink-dark active:bg-brand-pink-light/60"
                       >
-                        <Plus size={15} />
+                        <Plus size={13} /> Agregar
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  {selected && <div className="mt-2.5 hidden sm:block">{stepper(v, n)}</div>}
                 </li>
               );
             })}

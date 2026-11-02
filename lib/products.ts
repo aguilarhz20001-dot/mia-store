@@ -97,8 +97,8 @@ export function rowToProduct(
     description: row.description,
     price: Number(row.price),
     category: row.category as CategoryId,
-    // Si el producto no tiene fotos generales, se usa la primera foto de algún estilo.
-    image: images[0] ?? variants.find((v) => v.image)?.image,
+    // Si el producto no tiene fotos generales, se usa la primera foto de un estilo (mejor uno con stock).
+    image: images[0] ?? variants.find((v) => v.inStock && v.image)?.image ?? variants.find((v) => v.image)?.image,
     images,
     video: row.video_url ?? undefined,
     badge: row.badge ?? undefined,
