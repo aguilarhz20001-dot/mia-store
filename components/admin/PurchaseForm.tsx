@@ -6,13 +6,16 @@ import { Plus } from "lucide-react";
 import { createPurchase } from "@/app/admin/actions";
 import type { PaidFrom } from "@/lib/admin/types";
 import PaidFromSelect from "./PaidFromSelect";
+import ThumbSelect from "./ThumbSelect";
 
 export type PurchaseOption = {
   id: string;
   name: string;
   lastCost: number | null;
+  /** Foto principal (para la miniatura) */
+  image: string | null;
   /** Estilos del producto (si tiene) */
-  variants: { id: string; name: string }[];
+  variants: { id: string; name: string; image: string | null }[];
 };
 
 const NEW_STYLE = "__nuevo__";
@@ -58,6 +61,8 @@ export default function PurchaseForm({
     e.preventDefault();
     setError("");
     setOk("");
+    if (!productId) return setError("Elige un producto.");
+    if (hasVariants && !variantId) return setError("Elige un estilo.");
     setBusy(true);
     const res = await createPurchase({
       product_id: productId,
@@ -90,23 +95,27 @@ export default function PurchaseForm({
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2">
           <label htmlFor="p-product" className="adm-label">Producto</label>
-          <select id="p-product" required className="input-field" value={productId} onChange={(e) => pickProduct(e.target.value)}>
-            <option value="">Elige un producto…</option>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </select>
+          <ThumbSelect
+            id="p-product"
+            value={productId}
+            onChange={pickProduct}
+            placeholder="Elige un producto…"
+            items={options.map((o) => ({ value: o.id, label: o.name, image: o.image }))}
+          />
         </div>
         {hasVariants && (
           <div className="sm:col-span-2">
             <label htmlFor="p-variant" className="adm-label">Estilo</label>
-            <select id="p-variant" required className="input-field" value={variantId} onChange={(e) => setVariantId(e.target.value)}>
-              <option value="">Elige un estilo…</option>
-              {selected!.variants.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
-              ))}
-              <option value={NEW_STYLE}>＋ Nuevo estilo…</option>
-            </select>
+            <ThumbSelect
+              id="p-variant"
+              value={variantId}
+              onChange={setVariantId}
+              placeholder="Elige un estilo…"
+              items={[
+                ...selected!.variants.map((v) => ({ value: v.id, label: v.name, image: v.image })),
+                { value: NEW_STYLE, label: "Nuevo estilo…", plain: true },
+              ]}
+            />
             {variantId === NEW_STYLE && (
               <input
                 required

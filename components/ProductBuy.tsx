@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Minus, Plus, ShoppingBag } from "lucide-react";
 import type { Product, ProductVariant } from "@/lib/products";
@@ -14,7 +14,8 @@ const MAX_PER_LINE = 99;
 const DOT_COLORS = ["#d6338a", "#a58cf5", "#ff5fa8", "#1f3a8a", "#c026a3", "#7c5cd6"];
 
 export default function ProductBuy({ product }: { product: Product }) {
-  const { previewId, setPreviewId } = useProductView();
+  const { previewId, setPreviewId, swipeMode } = useProductView();
+  const listRef = useRef<HTMLUListElement>(null);
   const [size, setSize] = useState<string | undefined>(undefined);
   const [qty, setQty] = useState(1);
   /** Cantidad elegida por estilo (para productos con estilos) */
@@ -31,6 +32,19 @@ export default function ProductBuy({ product }: { product: Product }) {
 
   const pickedList = variants.filter((v) => (picked[v.id] ?? 0) > 0);
   const pickedUnits = pickedList.reduce((n, v) => n + (picked[v.id] ?? 0), 0);
+
+  // Celular: si no se marcó ningún estilo con «Agregar», el que se ve en la galería es el que se lleva
+  const viewingVariant = variants.find((v) => v.id === previewId);
+  const implicitVariant = swipeMode && pickedUnits === 0 ? viewingVariant : undefined;
+
+  // Al deslizar la galería, la fila de tarjetas se mueve sola hasta el estilo en vista (sin mover la página)
+  useEffect(() => {
+    const ul = listRef.current;
+    if (!ul || !previewId || ul.scrollWidth <= ul.clientWidth) return;
+    const li = ul.querySelector<HTMLElement>(`[data-variant="${CSS.escape(previewId)}"]`);
+    if (!li) return;
+    ul.scrollTo({ left: li.offsetLeft - (ul.clientWidth - li.offsetWidth) / 2, behavior: "smooth" });
+  }, [previewId]);
 
   function changeVariantQty(v: ProductVariant, delta: number) {
     setError("");
@@ -86,11 +100,15 @@ export default function ProductBuy({ product }: { product: Product }) {
     }
     if (hasVariants) {
       if (pickedUnits === 0) {
-        setError("Elige al menos un estilo para continuar.");
-        return;
+        if (!implicitVariant) {
+          setError("Elige al menos un estilo para continuar.");
+          return;
+        }
+        addToCart(product.slug, 1, size, implicitVariant.id);
+      } else {
+        for (const v of pickedList) addToCart(product.slug, picked[v.id], size, v.id);
+        setPicked({});
       }
-      for (const v of pickedList) addToCart(product.slug, picked[v.id], size, v.id);
-      setPicked({});
     } else {
       addToCart(product.slug, qty, size);
     }
@@ -107,7 +125,7 @@ export default function ProductBuy({ product }: { product: Product }) {
             Elige tu estilo <span className="font-normal text-brand-ink/60">(puedes elegir varios)</span>
           </p>
           {/* Celular: tarjetas pequeñas que se deslizan de lado. Tablet y compu: cuadrícula. */}
-          <ul className="-mx-4 mt-2 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-2.5 sm:overflow-visible sm:px-0 sm:pb-0">
+          <ul ref={listRef} className="relative -mx-4 mt-2 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-2.5 sm:overflow-visible sm:px-0 sm:pb-0">
             {variants.map((v, i) => {
               const n = picked[v.id] ?? 0;
               const selected = n > 0;
@@ -115,6 +133,7 @@ export default function ProductBuy({ product }: { product: Product }) {
               return (
                 <li
                   key={v.id}
+                  data-variant={v.id}
                   className={`w-[8.75rem] shrink-0 snap-start rounded-2xl border p-2.5 transition-colors sm:w-auto sm:p-3 ${
                     selected
                       ? "border-brand-pink bg-brand-pink-light/60"
@@ -140,7 +159,7 @@ export default function ProductBuy({ product }: { product: Product }) {
                         <span className="block truncate text-sm font-medium text-brand-ink sm:text-base">{v.name}</span>
                         <span className="block text-xs text-brand-ink/55">
                           {viewing ? (
-                            <span className="font-semibold text-brand-pink-dark">Viendo</span>
+                            <span className="font-semibold text-brand-pink-dark">{implicitVariant ? "Elegido" : "Viendo"}</span>
                           ) : v.stock <= 3 ? (
                             `Quedan ${v.stock}`
                           ) : (
@@ -255,7 +274,7 @@ export default function ProductBuy({ product }: { product: Product }) {
           className="btn-primary inline-flex items-center gap-2 px-7 py-3 font-semibold"
         >
           {added ? <Check size={18} /> : <ShoppingBag size={18} />}
-          {soldOut ? "Agotado" : added ? "¡Agregado!" : "Agregar al carrito"}
+          {soldOut ? "Agotado" : added ? "¡Agregado!" : implicitVariant ? `Agregar «${implicitVariant.name}»` : "Agregar al carrito"}
         </button>
         {added && (
           <Link href="/carrito" className="btn-outline inline-flex items-center px-7 py-3 font-semibold">

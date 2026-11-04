@@ -32,7 +32,8 @@ export default async function BodegaPage({ searchParams }: { searchParams: Promi
     id: p.id,
     name: p.name,
     lastCost: lastCost.get(p.id) ?? null,
-    variants: (variantsOf.get(p.id) ?? []).map((v) => ({ id: v.id, name: v.name })),
+    image: p.images?.[0] ?? (variantsOf.get(p.id) ?? []).find((v) => v.images?.[0])?.images?.[0] ?? null,
+    variants: (variantsOf.get(p.id) ?? []).map((v) => ({ id: v.id, name: v.name, image: v.images?.[0] ?? null })),
   }));
 
   const visible = rows
